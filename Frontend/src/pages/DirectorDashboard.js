@@ -95,10 +95,13 @@ function DirectorDashboard() {
     return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
   };
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
 
   return (
     <div style={styles.page}>
+
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
@@ -138,30 +141,46 @@ function DirectorDashboard() {
 
       {/* MAIN */}
       <div style={styles.main}>
+
+        {/* TOPBAR */}
         <div style={styles.topbar}>
           <div>
-            <div style={styles.topbarTitle}>DOP Portal - LNMIIT</div>
-            <div style={styles.topbarSub}>Director's View</div>
+            <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
+            <div style={styles.topbarSub}>{today}</div>
           </div>
           <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}</div>
-            <div style={styles.rolePill}>👤 Director ▾</div>
+            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>
+              🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}
+            </div>
+            <button style={styles.logoutTopBtn} onClick={handleLogout}>
+              Logout
+            </button>
           </div>
         </div>
 
         <div style={styles.content}>
+
+          {/* GREETING */}
           <div style={styles.greeting}>
-            Good morning, <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
-            &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
-          </div>
+  {(() => {
+    const hour = new Date().getHours();
+    let greeting;
+    if (hour >= 5 && hour < 12)       greeting = 'Good morning';
+    else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+    else if (hour >= 17 && hour < 21) greeting = 'Good evening';
+    else                               greeting = 'Good night';
+    return greeting;
+  })()}, <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
+  &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
+</div>
 
           {/* STAT CARDS */}
           <div style={styles.statGrid}>
             {[
-              {icon:'📋', num: stats.requests,  label:'Pending Approvals', bg:'#FEE2E2', color:'#991B1B'},
-              {icon:'📅', num: stats.meetings,  label:"Today's Meetings",  bg:'#EFF6FF', color:'#1A3A6B'},
-              {icon:'👥', num: stats.visitors,  label:'Visitors Today',    bg:'#F0FDF4', color:'#166534'},
-              {icon:'✅', num: stats.tasks,     label:'Active Tasks',      bg:'#FFFBEB', color:'#92400E'},
+              {icon:'📋', num: stats.requests, label:'Pending Approvals', bg:'#FEE2E2', color:'#991B1B'},
+              {icon:'📅', num: stats.meetings, label:"Today's Meetings",  bg:'#EFF6FF', color:'#1A3A6B'},
+              {icon:'👥', num: stats.visitors, label:'Visitors Today',    bg:'#F0FDF4', color:'#166534'},
+              {icon:'✅', num: stats.tasks,    label:'Active Tasks',      bg:'#FFFBEB', color:'#92400E'},
             ].map((s,i) => (
               <div key={i} style={styles.statCard}>
                 <div style={{...styles.statIcon, background:s.bg}}>{s.icon}</div>
@@ -174,6 +193,7 @@ function DirectorDashboard() {
           </div>
 
           <div style={styles.midRow}>
+
             {/* PENDING APPROVALS */}
             <div style={styles.card}>
               <div style={styles.cardHeader}>
@@ -188,13 +208,19 @@ function DirectorDashboard() {
                     {req.purpose ? req.purpose[0].toUpperCase() : 'R'}
                   </div>
                   <div style={{flex:1}}>
-                    <div style={styles.reqName}>{req.purpose ? req.purpose.slice(0, 25) + '...' : 'No purpose'}</div>
-                    <div style={styles.reqDept}>{req.preferred_date ? new Date(req.preferred_date).toLocaleDateString() : 'No date'}</div>
+                    <div style={styles.reqName}>
+                      {req.purpose ? req.purpose.slice(0, 25) + '...' : 'No purpose'}
+                    </div>
+                    <div style={styles.reqDept}>
+                      {req.preferred_date ? new Date(req.preferred_date).toLocaleDateString() : 'No date'}
+                    </div>
                   </div>
-                  <span style={{...styles.tag, background:priBg[req.priority], color:priColor[req.priority]}}>{req.priority}</span>
+                  <span style={{...styles.tag, background:priBg[req.priority], color:priColor[req.priority]}}>
+                    {req.priority}
+                  </span>
                   <div style={styles.actionBtns}>
                     <button style={styles.approveBtn} onClick={() => handleApprove(req.id)}>✓</button>
-                    <button style={styles.rejectBtn} onClick={() => handleReject(req.id)}>✗</button>
+                    <button style={styles.rejectBtn}  onClick={() => handleReject(req.id)}>✗</button>
                   </div>
                 </div>
               ))}
@@ -210,7 +236,9 @@ function DirectorDashboard() {
                 <div style={styles.emptyMsg}>No events today</div>
               ) : schedule.map((ev, i) => {
                 const s = getTypeStyle(ev.type);
-                const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const time = new Date(ev.start_time).toLocaleTimeString('en-US', {
+                  hour: '2-digit', minute: '2-digit', hour12: false
+                });
                 return (
                   <div key={i} style={styles.schItem}>
                     <span style={styles.schTime}>{time}</span>
@@ -228,6 +256,7 @@ function DirectorDashboard() {
             <div style={styles.card}>
               <div style={styles.cardHeader}>
                 <span style={styles.cardTitle}>🔔 New Notifications</span>
+                <span style={styles.viewAll} onClick={() => navigate('/notifications')}>View all →</span>
               </div>
               <div style={{padding:'8px 16px'}}>
                 {notifications.map((n, i) => (
@@ -242,6 +271,7 @@ function DirectorDashboard() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
@@ -266,10 +296,10 @@ const styles = {
   main:          { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
   topbar:        { background:'#1A3A6B', padding:'12px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 },
   topbarTitle:   { color:'#fff', fontSize:'14px', fontWeight:'700' },
-  topbarSub:     { color:'rgba(255,255,255,0.5)', fontSize:'10px', marginTop:'1px' },
+  topbarSub:     { color:'rgba(255,255,255,0.7)', fontSize:'10px', marginTop:'1px' },
   topbarRight:   { display:'flex', alignItems:'center', gap:'10px' },
   notifBtn:      { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'8px', padding:'6px 10px', color:'#fff', fontSize:'14px', cursor:'pointer' },
-  rolePill:      { background:'rgba(37,99,235,0.3)', border:'1px solid rgba(37,99,235,0.5)', borderRadius:'20px', padding:'5px 12px', fontSize:'11px', color:'#fff', fontWeight:'600', cursor:'pointer' },
+  logoutTopBtn:  { background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'6px 14px', color:'#FCA5A5', fontSize:'11px', fontWeight:'600', cursor:'pointer' },
   content:       { flex:1, overflowY:'auto', padding:'18px 22px' },
   greeting:      { fontSize:'13px', color:'#475569', marginBottom:'16px' },
   statGrid:      { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'16px' },

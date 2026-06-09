@@ -40,20 +40,20 @@ function Login() {
         {/* TOP BANNER */}
         <div style={styles.top}>
           <div style={styles.logoRow}>
-            <div style={{...styles.badge, background:'#2563EB'}}>D</div>
-            <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
+            {/* <div style={{...styles.badge, background:'#2563EB'}}>logo</div> */}
+            <div style={{...styles.badge, background:'#0EA5E9'}}>logo</div>
             <div style={styles.logoText}>
-              <div style={styles.logoTitle}>DOP Portal</div>
+              <div style={styles.logoTitle}> Director Office Portal</div>
               <div style={styles.logoSub}>Director's Office — LNMIIT</div>
             </div>
           </div>
-          <div style={styles.welcomeText}>Welcome Back</div>
+          <div style={styles.welcomeText}>Welcome</div>
           <div style={styles.welcomeSub}>Sign in with your LNMIIT credentials</div>
         </div>
 
         {/* FORM */}
         <form style={styles.form} onSubmit={handleLogin}>
-          <label style={styles.label}>Institutional Email</label>
+          <label style={styles.label}>Email Address</label>
           <input
             style={styles.input}
             type="email"

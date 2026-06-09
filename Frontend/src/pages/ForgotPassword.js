@@ -32,12 +32,12 @@ function ForgotPassword() {
           </div>
           <div style={styles.stepLabel}>Step 1 of 3 — Enter Email</div>
           <div style={styles.heading}>Forgot Password?</div>
-          <div style={styles.subheading}>Enter your LNMIIT email to receive an OTP</div>
+          <div style={styles.subheading}>Enter your registered email</div>
         </div>
 
         {/* FORM */}
         <form style={styles.form} onSubmit={handleSubmit}>
-          <label style={styles.label}>Institutional Email</label>
+          <label style={styles.label}>Email Address</label>
           <input
             style={styles.input}
             type="email"
