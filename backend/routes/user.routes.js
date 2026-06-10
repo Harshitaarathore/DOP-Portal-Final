@@ -61,4 +61,12 @@ router.delete('/announcements/:id', verifyToken, (req, res) => {
   });
 });
 
+router.get('/audit-logs', verifyToken, allowRoles('Secretary', 'Director'), (req, res) => {
+  const sql = `SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 100`;
+  db.query(sql, (err, results) => {
+    if (err) return res.json({ success: false, message: err.message, data: null });
+    res.json({ success: true, message: 'Audit logs fetched', data: results });
+  });
+});
+
 module.exports = router;

@@ -11,6 +11,7 @@ const userRoutes = require('./routes/user.routes');
 const documentRoutes = require('./routes/document.routes');
 const reportRoutes = require('./routes/report.routes');
 const adminRoutes = require('./routes/admin.routes');
+const communicationRoutes = require('./routes/communication.routes');
 const { verifyToken } = require('./middleware/auth.middleware');
 const { allowRoles } = require('./middleware/role.middleware');
 const { startScheduler } = require('./utils/scheduler');
@@ -34,6 +35,7 @@ app.use('/documents', documentRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/reports', reportRoutes);
 app.use('/admin', adminRoutes);
+app.use('/communications', communicationRoutes);
 
 app.get('/test-auth', verifyToken, (req, res) => {
   res.json({ success: true, message: `Hello ${req.user.role}`, data: null });
@@ -46,6 +48,5 @@ app.get('/test-director', verifyToken, allowRoles('Director'), (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-startScheduler();
+  startScheduler();
 });

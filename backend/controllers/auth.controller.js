@@ -59,9 +59,12 @@ const forgotPassword = async (req, res) => {
     const expiresAt = getExpiryTime();
     const id = uuidv4();
 
-    const insertSql = `INSERT INTO otps (id, email, otp_code, expires_at) VALUES (?, ?, ?, ?)`;
+    // Delete old OTPs for this email first
+db.query(`DELETE FROM otps WHERE email = ?`, [email]);
 
-    db.query(insertSql, [id, email, otp, expiresAt], async (err2) => {
+const insertSql = `INSERT INTO otps (id, email, otp_code, expires_at) VALUES (?, ?, ?, ?)`;
+
+db.query(insertSql, [id, email, otp, expiresAt], async (err2) => {
       if (err2) return res.json({ success: false, message: err2.message, data: null });
 
       try {

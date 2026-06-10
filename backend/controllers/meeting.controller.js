@@ -10,9 +10,9 @@ const upload = multer({ storage });
 
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+const { sendMeetingApprovedEmail, sendMeetingRejectedEmail } = require('../utils/email');
 
 const logAudit = (user_id, action, module) => {
-  const { v4: uuidv4 } = require('uuid');
   const sql = `INSERT INTO audit_logs (id, user_id, action, module) VALUES (?, ?, ?, ?)`;
   db.query(sql, [uuidv4(), user_id, action, module], (err) => {
     if (err) console.log('Audit log error:', err.message);
@@ -34,7 +34,6 @@ const submitRequest = (req, res) => {
   });
 };
 
-
 // GET ALL REQUESTS (Secretary)
 const getAllRequests = (req, res) => {
   const { status, priority } = req.query;
@@ -42,15 +41,8 @@ const getAllRequests = (req, res) => {
   let sql = `SELECT * FROM meeting_requests WHERE 1=1`;
   const params = [];
 
-  if (status) {
-    sql += ` AND status = ?`;
-    params.push(status);
-  }
-
-  if (priority) {
-    sql += ` AND priority = ?`;
-    params.push(priority);
-  }
+  if (status) { sql += ` AND status = ?`; params.push(status); }
+  if (priority) { sql += ` AND priority = ?`; params.push(priority); }
 
   sql += ` ORDER BY created_at DESC`;
 
@@ -63,25 +55,33 @@ const getAllRequests = (req, res) => {
 // APPROVE REQUEST (Director only)
 const approveRequest = (req, res) => {
   const { id } = req.params;
-  const { v4: uuidv4 } = require('uuid');
 
   const sql = `UPDATE meeting_requests SET status = 'Approved' WHERE id = ?`;
 
   db.query(sql, [id], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
 
-    // get requester_id to send notification
-    const getSql = `SELECT requester_id FROM meeting_requests WHERE id = ?`;
-    db.query(getSql, [id], (err2, results) => {
+    const getSql = `SELECT mr.*, u.email, u.name FROM meeting_requests mr JOIN users u ON u.id = mr.requester_id WHERE mr.id = ?`;
+
+    db.query(getSql, [id], async (err2, results) => {
       if (err2 || results.length === 0) return res.json({ success: true, message: 'Request approved', data: null });
-      
+
+      const request = results[0];
+
       logAudit(req.user.id, 'APPROVED meeting request', 'Meetings');
 
-      const notifId = uuidv4();
+      // Send notification
       const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
-      db.query(notifSql, [notifId, results[0].requester_id, 'Your meeting request has been approved', 'meeting_approved']);
+      db.query(notifSql, [uuidv4(), request.requester_id, 'Your meeting request has been approved', 'meeting_approved']);
 
-      res.json({ success: true, message: 'Request approved and notification sent', data: null });
+      // Send email
+      try {
+        await sendMeetingApprovedEmail(request.email, request.name, request.purpose, request.preferred_date);
+      } catch (emailErr) {
+        console.log('Approval email failed:', emailErr.message);
+      }
+
+      res.json({ success: true, message: 'Request approved, notification and email sent', data: null });
     });
   });
 };
@@ -89,25 +89,33 @@ const approveRequest = (req, res) => {
 // REJECT REQUEST (Director only)
 const rejectRequest = (req, res) => {
   const { id } = req.params;
-  const { v4: uuidv4 } = require('uuid');
 
   const sql = `UPDATE meeting_requests SET status = 'Rejected' WHERE id = ?`;
 
   db.query(sql, [id], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
 
-    // get requester_id to send notification
-    const getSql = `SELECT requester_id FROM meeting_requests WHERE id = ?`;
-    db.query(getSql, [id], (err2, results) => {
+    const getSql = `SELECT mr.*, u.email, u.name FROM meeting_requests mr JOIN users u ON u.id = mr.requester_id WHERE mr.id = ?`;
+
+    db.query(getSql, [id], async (err2, results) => {
       if (err2 || results.length === 0) return res.json({ success: true, message: 'Request rejected', data: null });
+
+      const request = results[0];
 
       logAudit(req.user.id, 'REJECTED meeting request', 'Meetings');
 
-      const notifId = uuidv4();
+      // Send notification
       const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
-      db.query(notifSql, [notifId, results[0].requester_id, 'Your meeting request has been rejected', 'meeting_rejected']);
+      db.query(notifSql, [uuidv4(), request.requester_id, 'Your meeting request has been rejected', 'meeting_rejected']);
 
-      res.json({ success: true, message: 'Request rejected and notification sent', data: null });
+      // Send email
+      try {
+        await sendMeetingRejectedEmail(request.email, request.name, request.purpose);
+      } catch (emailErr) {
+        console.log('Rejection email failed:', emailErr.message);
+      }
+
+      res.json({ success: true, message: 'Request rejected, notification and email sent', data: null });
     });
   });
 };
