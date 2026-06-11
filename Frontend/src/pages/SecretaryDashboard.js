@@ -348,9 +348,7 @@ function SecretaryDashboard() {
                       <span style={{...styles.tag, background: s.priBg, color: s.priColor}}>{r.priority}</span>
                     </div>
                     <div style={styles.reqBtns}>
-                      <button style={styles.approveBtn} onClick={() => handleApprove(r.id)}>✓</button>
-                      <button style={styles.rejectBtn} onClick={() => handleReject(r.id)}>✗</button>
-                    </div>
+                                         </div>
                   </div>
                 );
               })}
