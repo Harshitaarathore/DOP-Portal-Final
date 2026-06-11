@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://dop-portal-final-xxxx.onrender.com',
+  baseURL: 'https://dop-portal-final.onrender.com',
 });
 
 API.interceptors.request.use((req) => {
