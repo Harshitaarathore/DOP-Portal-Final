@@ -114,6 +114,7 @@ function Calendar() {
           {label:'Requests',  path:'/requests'},
           {label:'Documents', path:'/documents'},
           {label:'Visitors',  path:'/visitors'},
+          {label:'Communication', path:'/communications'},
           {label:'Tasks',     path:'/tasks'},
           {label:'Reports',   path:'/reports'},
           {label:'Settings',  path:'/settings'},

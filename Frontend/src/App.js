@@ -28,6 +28,7 @@ import Notifications from './pages/Notifications';
 import VisitorRegister from './pages/VisitorRegister';
 import Announcements from './pages/Announcements';
 import AuditLogs from './pages/AuditLogs';
+import Communications from './pages/Communications';
 
 function App() {
   return (
@@ -75,7 +76,10 @@ function App() {
 
         {/* 404 - must be LAST */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
+
+        <Route path="/communications" element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Communications /></ProtectedRoute>} />
+
+      </Routes> 
     </BrowserRouter>
   );
 }

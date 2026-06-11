@@ -23,13 +23,7 @@ function DirectorRequests() {
     } catch (err) {
       console.error('Error fetching requests:', err);
       // fallback dummy data
-      setRequests([
-        { id:1, requester_name:'Dr. Sharma',      department:'Computer Science', purpose:'Meeting Request',  created_at:'2026-05-24', priority:'High',   status:'Pending',  description:'Requesting a meeting to discuss new curriculum changes.' },
-        { id:2, requester_name:'Prof. Mehta',      department:'Electronics',      purpose:'Leave Approval',   created_at:'2026-05-23', priority:'Medium', status:'Pending',  description:'Applying for 3 days leave for IEEE conference.' },
-        { id:3, requester_name:'Registrar Office', department:'Admin',            purpose:'Document Sign',    created_at:'2026-05-22', priority:'High',   status:'Pending',  description:'Urgent signature required on UGC documents.' },
-        { id:4, requester_name:'Prof. Agarwal',    department:'Mechanical',       purpose:'Research Fund',    created_at:'2026-05-21', priority:'Low',    status:'Approved', description:'Research funding request for lab equipment.' },
-        { id:5, requester_name:'Dr. N. Kumar',     department:'Physics',          purpose:'Meeting Request',  created_at:'2026-05-20', priority:'Medium', status:'Rejected', description:'Meeting request for PhD admission process.' },
-      ]);
+      setRequests([]);
     }
     setLoading(false);
   };
