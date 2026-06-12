@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
+import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function DirectorDashboard() {
   const navigate = useNavigate();
@@ -95,6 +96,14 @@ function DirectorDashboard() {
     return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12)       return 'Good morning';
+    else if (hour >= 12 && hour < 17) return 'Good afternoon';
+    else if (hour >= 17 && hour < 21) return 'Good evening';
+    else                               return 'Good night';
+  };
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
@@ -105,11 +114,8 @@ function DirectorDashboard() {
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
-          <div style={styles.logoRow}>
-            <div style={{...styles.badge, background:'#2563EB'}}>D</div>
-            <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
-          </div>
-          <div style={styles.logoTitle}>DOP Portal</div>
+          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
+          <div style={styles.logoTitle}>Director's Office Portal</div>
           <div style={styles.logoSub}>Director's Office</div>
         </div>
         {[
@@ -135,7 +141,6 @@ function DirectorDashboard() {
             <div style={styles.userName}>{name}</div>
             <div style={styles.userRole}>Director</div>
           </div>
-          <div style={styles.logoutBtn} onClick={handleLogout}>↩</div>
         </div>
       </div>
 
@@ -144,9 +149,12 @@ function DirectorDashboard() {
 
         {/* TOPBAR */}
         <div style={styles.topbar}>
-          <div>
-            <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-            <div style={styles.topbarSub}>{today}</div>
+          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
+            <div>
+              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
+              <div style={styles.topbarSub}>{today}</div>
+            </div>
           </div>
           <div style={styles.topbarRight}>
             <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>
@@ -162,17 +170,10 @@ function DirectorDashboard() {
 
           {/* GREETING */}
           <div style={styles.greeting}>
-  {(() => {
-    const hour = new Date().getHours();
-    let greeting;
-    if (hour >= 5 && hour < 12)       greeting = 'Good morning';
-    else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
-    else if (hour >= 17 && hour < 21) greeting = 'Good evening';
-    else                               greeting = 'Good night';
-    return greeting;
-  })()}, <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
-  &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
-</div>
+            {getGreeting()},{' '}
+            <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
+            &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
+          </div>
 
           {/* STAT CARDS */}
           <div style={styles.statGrid}>
@@ -282,8 +283,8 @@ const styles = {
   page:          { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F0F4FA', overflow:'hidden' },
   sidebar:       { width:'168px', background:'#122951', display:'flex', flexDirection:'column', flexShrink:0 },
   sidebarLogo:   { padding:'20px 16px 16px', borderBottom:'1px solid rgba(255,255,255,0.08)', marginBottom:'10px' },
-  logoRow:       { display:'flex', gap:'6px', marginBottom:'8px' },
-  badge:         { width:'26px', height:'26px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:'700', fontSize:'11px' },
+  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
+  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
   logoTitle:     { color:'#fff', fontSize:'13px', fontWeight:'700' },
   logoSub:       { color:'rgba(255,255,255,0.4)', fontSize:'9px' },
   navItem:       { display:'flex', alignItems:'center', padding:'9px 16px', margin:'1px 8px', borderRadius:'8px', cursor:'pointer', fontSize:'12px', color:'rgba(255,255,255,0.7)', fontWeight:'500' },

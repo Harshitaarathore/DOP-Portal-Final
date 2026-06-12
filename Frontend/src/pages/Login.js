@@ -1,6 +1,7 @@
 import API from '../api';
 import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
+import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function Login() {
   const navigate = useNavigate();
@@ -40,15 +41,14 @@ function Login() {
         {/* TOP BANNER */}
         <div style={styles.top}>
           <div style={styles.logoRow}>
-            {/* <div style={{...styles.badge, background:'#2563EB'}}>logo</div> */}
-            <div style={{...styles.badge, background:'#0EA5E9'}}>logo</div>
+            <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
             <div style={styles.logoText}>
               <div style={styles.logoTitle}> Director Office Portal</div>
               <div style={styles.logoSub}>Director's Office — LNMIIT</div>
             </div>
           </div>
           <div style={styles.welcomeText}>Welcome</div>
-          <div style={styles.welcomeSub}>Sign in with your LNMIIT credentials</div>
+          <div style={styles.welcomeSub}>Only Instituional email's are allowed.</div>
         </div>
 
         {/* FORM */}
@@ -121,6 +121,8 @@ const styles = {
   btn:         { width:'100%', background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'8px', padding:'12px', fontSize:'13px', fontWeight:'700', cursor:'pointer', marginBottom:'14px' },
   note:        { fontSize:'9px', color:'#94A3B8', textAlign:'center' },
   visitorLink: { fontSize:'10px', color:'#2563EB', textAlign:'center', cursor:'pointer', marginTop:'8px', fontWeight:'600' },
+  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
+topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
 };
 
 export default Login;
