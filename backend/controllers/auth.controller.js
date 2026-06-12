@@ -48,6 +48,7 @@ const login = (req, res) => {
 // FORGOT PASSWORD - send OTP
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
+  console.log('FORGOT PASSWORD REQUEST FOR:', email);
 
   const sql = `SELECT * FROM users WHERE email = ?`;
 
@@ -59,21 +60,26 @@ const forgotPassword = async (req, res) => {
     const expiresAt = getExpiryTime();
     const id = uuidv4();
 
-    // Delete old OTPs for this email first
-db.query(`DELETE FROM otps WHERE email = ?`, [email]);
+    db.query(`DELETE FROM otps WHERE email = ?`, [email]);
 
-const insertSql = `INSERT INTO otps (id, email, otp_code, expires_at) VALUES (?, ?, ?, ?)`;
+    const insertSql = `INSERT INTO otps (id, email, otp_code, expires_at) VALUES (?, ?, ?, ?)`;
 
-db.query(insertSql, [id, email, otp, expiresAt], async (err2) => {
+    db.query(insertSql, [id, email, otp, expiresAt], async (err2) => {
       if (err2) return res.json({ success: false, message: err2.message, data: null });
 
+      console.log('OTP GENERATED:', otp, 'SENDING TO:', email);
+
       try {
-  await sendOTPEmail(email, otp);
-  res.json({ success: true, message: 'OTP sent to email', data: null });
-} catch (emailErr) {
-  console.error('EMAIL ERROR:', emailErr.message, emailErr.code, emailErr.response);
-  res.json({ success: false, message: emailErr.message, data: null });
-}
+        await sendOTPEmail(email, otp);
+        console.log('EMAIL SENT SUCCESSFULLY');
+        res.json({ success: true, message: 'OTP sent to email', data: null });
+      } catch (emailErr) {
+        console.error('EMAIL FAILED:', emailErr.message);
+        console.error('EMAIL ERROR CODE:', emailErr.code);
+        console.error('EMAIL RESPONSE:', emailErr.response);
+        console.error('FULL ERROR:', JSON.stringify(emailErr, null, 2));
+        res.json({ success: false, message: emailErr.message, data: null });
+      }
     });
   });
 };
