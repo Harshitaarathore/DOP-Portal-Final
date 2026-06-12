@@ -68,11 +68,12 @@ db.query(insertSql, [id, email, otp, expiresAt], async (err2) => {
       if (err2) return res.json({ success: false, message: err2.message, data: null });
 
       try {
-        await sendOTPEmail(email, otp);
-        res.json({ success: true, message: 'OTP sent to email', data: null });
-      } catch (emailErr) {
-        res.json({ success: false, message: 'Failed to send email', data: null });
-      }
+  await sendOTPEmail(email, otp);
+  res.json({ success: true, message: 'OTP sent to email', data: null });
+} catch (emailErr) {
+  console.error('EMAIL ERROR:', emailErr.message, emailErr.code, emailErr.response);
+  res.json({ success: false, message: emailErr.message, data: null });
+}
     });
   });
 };
