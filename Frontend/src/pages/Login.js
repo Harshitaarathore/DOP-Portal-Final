@@ -57,7 +57,7 @@ function Login() {
           <input
             style={styles.input}
             type="email"
-            placeholder="yourname@lnmiit.ac.in"
+            placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -87,12 +87,13 @@ function Login() {
 
           <button style={styles.btn} type="submit">Sign In →</button>
 
-          <div style={styles.note}>
-            Only <span style={{color:'#2563EB'}}>@lnmiit.ac.in</span> emails allowed &nbsp;|&nbsp; Role is auto-detected
-          </div>
+
           <div style={styles.visitorLink} onClick={() => navigate('/visitor-register')}>
                External visitor? Request an appointment here →
           </div>
+            <div style={styles.rights}>
+              © 2026 LNMIIT · All rights reserved
+            </div>
         </form>
 
       </div>
@@ -119,8 +120,8 @@ const styles = {
   forgotRow:   { textAlign:'right', marginBottom:'20px' },
   forgotLink:  { fontSize:'11px', color:'#2563EB', cursor:'pointer', fontWeight:'600' },
   btn:         { width:'100%', background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'8px', padding:'12px', fontSize:'13px', fontWeight:'700', cursor:'pointer', marginBottom:'14px' },
-  note:        { fontSize:'9px', color:'#94A3B8', textAlign:'center' },
   visitorLink: { fontSize:'10px', color:'#2563EB', textAlign:'center', cursor:'pointer', marginTop:'8px', fontWeight:'600' },
+  rights:        { fontSize:'9px', color:'#94A3B8', textAlign:'center', marginTop:'8px' },
   lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
 topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
 };
