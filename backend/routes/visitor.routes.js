@@ -4,7 +4,7 @@ const { submitVisitor, getTodayVisitors, approveVisitor, rejectVisitor } = requi
 const { verifyToken } = require('../middleware/auth.middleware');
 const { allowRoles } = require('../middleware/role.middleware');
 
-router.post('/request', verifyToken, submitVisitor);
+router.post('/request', submitVisitor);
 router.get('/today', verifyToken, allowRoles('Secretary', 'Director'), getTodayVisitors);
 router.put('/:id/approve', verifyToken, allowRoles('Secretary', 'Director'), approveVisitor);
 router.put('/:id/reject', verifyToken, allowRoles('Secretary', 'Director'), rejectVisitor);
