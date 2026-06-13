@@ -84,7 +84,7 @@ function DirectorRequests() {
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
           <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>DOP Portal</div>
+          <div style={styles.logoTitle}>Director's Office Portal</div>
           <div style={styles.logoSub}>Director's Office</div>
         </div>
         {[
@@ -119,7 +119,7 @@ function DirectorRequests() {
         <div style={styles.topbar}>
           <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
             <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
-            <div style={styles.topbarTitle}>DOP Portal — LNMIIT</div>
+            <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
             <div style={styles.topbarSub}>Director's View</div>
           </div>
           <div style={styles.topbarRight}>

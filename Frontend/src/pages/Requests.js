@@ -309,7 +309,6 @@ const styles = {
   page:          { display: 'flex', height: '100vh', fontFamily: "'DM Sans',sans-serif", background: '#F0F4FA', overflow: 'hidden' },
   sidebar:       { width: '168px', background: '#122951', display: 'flex', flexDirection: 'column', flexShrink: 0 },
   sidebarLogo:   { padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '10px' },
-  lnmiitLogo:    { width: '100px', objectFit: 'contain', marginBottom: '8px', filter: 'brightness(0) invert(1)' },
   logoTitle:     { color: '#fff', fontSize: '13px', fontWeight: '700' },
   logoSub:       { color: 'rgba(255,255,255,0.4)', fontSize: '9px' },
   navItem:       { display: 'flex', alignItems: 'center', padding: '9px 16px', margin: '1px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
@@ -326,7 +325,6 @@ const styles = {
   topbarSub:     { color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginTop: '1px' },
   topbarRight:   { display: 'flex', alignItems: 'center', gap: '10px' },
   notifBtn:      { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  logoutTopBtn:  { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
   content:       { flex: 1, overflowY: 'auto', padding: '18px 22px' },
   pageHeader:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' },
   pageTitle:     { fontSize: '16px', fontWeight: '700', color: '#1E293B' },
@@ -366,6 +364,9 @@ const styles = {
   forwardBtn:    { width: '100%', background: '#1A3A6B', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
   noSelection:   { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' },
   emptyMsg:      { padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94A3B8' },
+  logoutTopBtn:  { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
+topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
 };
 
 export default Requests;
