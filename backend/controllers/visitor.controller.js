@@ -62,7 +62,17 @@ const approveVisitor = async (req, res) => {
       rawDate.setDate(rawDate.getDate() + 1);
       const dateStr = rawDate.toISOString().split('T')[0];
 
-      const visitTime = visitor.visit_time || '10:00';
+      // Convert 12hr to 24hr format
+      const convertTo24Hr = (time12) => {
+        if (!time12) return '10:00';
+        if (!time12.includes('AM') && !time12.includes('PM')) return time12;
+        const [time, modifier] = time12.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (modifier === 'PM' && hours !== '12') hours = String(parseInt(hours) + 12);
+          if (modifier === 'AM' && hours === '12') hours = '00';
+          return `${hours.padStart(2,'0')}:${minutes}`;
+      };
+      const visitTime = convertTo24Hr(visitor.visit_time);
       const endHour = String(parseInt(visitTime.split(':')[0]) + 1).padStart(2, '0');
       const endMin = visitTime.split(':')[1];
       const startTime = `${dateStr} ${visitTime}:00`;
