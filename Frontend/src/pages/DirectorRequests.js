@@ -98,7 +98,7 @@ function DirectorRequests() {
           { label: 'Settings', path: '/settings' },
         ].map((item, i) => (
           <div key={i}
-            style={{ ...styles.navItem, ...(i === 1 ? styles.navActive : {}) }}
+            style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
             onClick={() => navigate(item.path)}
           >
             {item.label}

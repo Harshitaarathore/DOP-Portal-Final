@@ -188,7 +188,6 @@ function SecretaryDashboard() {
           {label:'Requests',   path:'/requests'},
           {label:'Documents',  path:'/documents'},
           {label:'Visitors',   path:'/visitors'},
-          {label:'Communication', path:'/communications'},
           {label:'Tasks',      path:'/tasks'},
           {label:'Reports',    path:'/reports'},
           {label:'Settings',   path:'/settings'},
@@ -349,7 +348,9 @@ function SecretaryDashboard() {
                       <span style={{...styles.tag, background: s.priBg, color: s.priColor}}>{r.priority}</span>
                     </div>
                     <div style={styles.reqBtns}>
-                                         </div>
+                      <button style={styles.approveBtn} onClick={() => handleApprove(r.id)}>✓</button>
+                      <button style={styles.rejectBtn} onClick={() => handleReject(r.id)}>✗</button>
+                    </div>
                   </div>
                 );
               })}

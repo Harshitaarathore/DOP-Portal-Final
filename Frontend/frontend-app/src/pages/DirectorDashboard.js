@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
-import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function DirectorDashboard() {
   const navigate = useNavigate();
@@ -96,26 +95,18 @@ function DirectorDashboard() {
     return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12)       return 'Good morning';
-    else if (hour >= 12 && hour < 17) return 'Good afternoon';
-    else if (hour >= 17 && hour < 21) return 'Good evening';
-    else                               return 'Good night';
-  };
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div style={styles.page}>
-
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
-          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>Director's Office Portal</div>
+          <div style={styles.logoRow}>
+            <div style={{...styles.badge, background:'#2563EB'}}>D</div>
+            <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
+          </div>
+          <div style={styles.logoTitle}>DOP Portal</div>
           <div style={styles.logoSub}>Director's Office</div>
         </div>
         {[
@@ -141,47 +132,36 @@ function DirectorDashboard() {
             <div style={styles.userName}>{name}</div>
             <div style={styles.userRole}>Director</div>
           </div>
+          <div style={styles.logoutBtn} onClick={handleLogout}>↩</div>
         </div>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
-
-        {/* TOPBAR */}
         <div style={styles.topbar}>
-          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
-            <div>
-              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>{today}</div>
-            </div>
+          <div>
+            <div style={styles.topbarTitle}>DOP Portal - LNMIIT</div>
+            <div style={styles.topbarSub}>Director's View</div>
           </div>
           <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>
-              🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}
-            </div>
-            <button style={styles.logoutTopBtn} onClick={handleLogout}>
-              Logout
-            </button>
+            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}</div>
+            <div style={styles.rolePill}>👤 Director ▾</div>
           </div>
         </div>
 
         <div style={styles.content}>
-
-          {/* GREETING */}
           <div style={styles.greeting}>
-            {getGreeting()},{' '}
-            <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
+            Good morning, <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
             &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
           </div>
 
           {/* STAT CARDS */}
           <div style={styles.statGrid}>
             {[
-              {icon:'📋', num: stats.requests, label:'Pending Approvals', bg:'#FEE2E2', color:'#991B1B'},
-              {icon:'📅', num: stats.meetings, label:"Today's Meetings",  bg:'#EFF6FF', color:'#1A3A6B'},
-              {icon:'👥', num: stats.visitors, label:'Visitors Today',    bg:'#F0FDF4', color:'#166534'},
-              {icon:'✅', num: stats.tasks,    label:'Active Tasks',      bg:'#FFFBEB', color:'#92400E'},
+              {icon:'📋', num: stats.requests,  label:'Pending Approvals', bg:'#FEE2E2', color:'#991B1B'},
+              {icon:'📅', num: stats.meetings,  label:"Today's Meetings",  bg:'#EFF6FF', color:'#1A3A6B'},
+              {icon:'👥', num: stats.visitors,  label:'Visitors Today',    bg:'#F0FDF4', color:'#166534'},
+              {icon:'✅', num: stats.tasks,     label:'Active Tasks',      bg:'#FFFBEB', color:'#92400E'},
             ].map((s,i) => (
               <div key={i} style={styles.statCard}>
                 <div style={{...styles.statIcon, background:s.bg}}>{s.icon}</div>
@@ -194,7 +174,6 @@ function DirectorDashboard() {
           </div>
 
           <div style={styles.midRow}>
-
             {/* PENDING APPROVALS */}
             <div style={styles.card}>
               <div style={styles.cardHeader}>
@@ -209,19 +188,13 @@ function DirectorDashboard() {
                     {req.purpose ? req.purpose[0].toUpperCase() : 'R'}
                   </div>
                   <div style={{flex:1}}>
-                    <div style={styles.reqName}>
-                      {req.purpose ? req.purpose.slice(0, 25) + '...' : 'No purpose'}
-                    </div>
-                    <div style={styles.reqDept}>
-                      {req.preferred_date ? new Date(req.preferred_date).toLocaleDateString() : 'No date'}
-                    </div>
+                    <div style={styles.reqName}>{req.purpose ? req.purpose.slice(0, 25) + '...' : 'No purpose'}</div>
+                    <div style={styles.reqDept}>{req.preferred_date ? new Date(req.preferred_date).toLocaleDateString() : 'No date'}</div>
                   </div>
-                  <span style={{...styles.tag, background:priBg[req.priority], color:priColor[req.priority]}}>
-                    {req.priority}
-                  </span>
+                  <span style={{...styles.tag, background:priBg[req.priority], color:priColor[req.priority]}}>{req.priority}</span>
                   <div style={styles.actionBtns}>
                     <button style={styles.approveBtn} onClick={() => handleApprove(req.id)}>✓</button>
-                    <button style={styles.rejectBtn}  onClick={() => handleReject(req.id)}>✗</button>
+                    <button style={styles.rejectBtn} onClick={() => handleReject(req.id)}>✗</button>
                   </div>
                 </div>
               ))}
@@ -237,9 +210,7 @@ function DirectorDashboard() {
                 <div style={styles.emptyMsg}>No events today</div>
               ) : schedule.map((ev, i) => {
                 const s = getTypeStyle(ev.type);
-                const time = new Date(ev.start_time).toLocaleTimeString('en-US', {
-                  hour: '2-digit', minute: '2-digit', hour12: false
-                });
+                const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                 return (
                   <div key={i} style={styles.schItem}>
                     <span style={styles.schTime}>{time}</span>
@@ -257,7 +228,6 @@ function DirectorDashboard() {
             <div style={styles.card}>
               <div style={styles.cardHeader}>
                 <span style={styles.cardTitle}>🔔 New Notifications</span>
-                <span style={styles.viewAll} onClick={() => navigate('/notifications')}>View all →</span>
               </div>
               <div style={{padding:'8px 16px'}}>
                 {notifications.map((n, i) => (
@@ -272,7 +242,6 @@ function DirectorDashboard() {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
@@ -283,8 +252,8 @@ const styles = {
   page:          { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F0F4FA', overflow:'hidden' },
   sidebar:       { width:'168px', background:'#122951', display:'flex', flexDirection:'column', flexShrink:0 },
   sidebarLogo:   { padding:'20px 16px 16px', borderBottom:'1px solid rgba(255,255,255,0.08)', marginBottom:'10px' },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
+  logoRow:       { display:'flex', gap:'6px', marginBottom:'8px' },
+  badge:         { width:'26px', height:'26px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:'700', fontSize:'11px' },
   logoTitle:     { color:'#fff', fontSize:'13px', fontWeight:'700' },
   logoSub:       { color:'rgba(255,255,255,0.4)', fontSize:'9px' },
   navItem:       { display:'flex', alignItems:'center', padding:'9px 16px', margin:'1px 8px', borderRadius:'8px', cursor:'pointer', fontSize:'12px', color:'rgba(255,255,255,0.7)', fontWeight:'500' },
@@ -297,10 +266,10 @@ const styles = {
   main:          { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
   topbar:        { background:'#1A3A6B', padding:'12px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 },
   topbarTitle:   { color:'#fff', fontSize:'14px', fontWeight:'700' },
-  topbarSub:     { color:'rgba(255,255,255,0.7)', fontSize:'10px', marginTop:'1px' },
+  topbarSub:     { color:'rgba(255,255,255,0.5)', fontSize:'10px', marginTop:'1px' },
   topbarRight:   { display:'flex', alignItems:'center', gap:'10px' },
   notifBtn:      { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'8px', padding:'6px 10px', color:'#fff', fontSize:'14px', cursor:'pointer' },
-  logoutTopBtn:  { background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'6px 14px', color:'#FCA5A5', fontSize:'11px', fontWeight:'600', cursor:'pointer' },
+  rolePill:      { background:'rgba(37,99,235,0.3)', border:'1px solid rgba(37,99,235,0.5)', borderRadius:'20px', padding:'5px 12px', fontSize:'11px', color:'#fff', fontWeight:'600', cursor:'pointer' },
   content:       { flex:1, overflowY:'auto', padding:'18px 22px' },
   greeting:      { fontSize:'13px', color:'#475569', marginBottom:'16px' },
   statGrid:      { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'16px' },

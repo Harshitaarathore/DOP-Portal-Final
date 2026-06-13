@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
-import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function Documents() {
   const [selectedDoc, setSelectedDoc] = useState(null);
@@ -20,9 +19,6 @@ function Documents() {
   const [newDoc, setNewDoc] = useState({ title: '', category: 'NAAC', access_level: 'public', version: '1.0' });
   const [selectedFile, setSelectedFile] = useState(null);
   const role = localStorage.getItem('role');
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-});
   const name = localStorage.getItem('name') || 'User';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
 
@@ -39,11 +35,6 @@ const today = new Date().toLocaleDateString('en-US', {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
   };
 
   const handleUpload = async () => {
@@ -144,8 +135,11 @@ const handleAddVersion = async () => {
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
-            <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-            <div style={styles.logoTitle}>Director's Office Portal</div>
+          <div style={styles.logoRow}>
+            <div style={{...styles.badge, background:'#2563EB'}}>D</div>
+            <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
+          </div>
+          <div style={styles.logoTitle}>DOP Portal</div>
           <div style={styles.logoSub}>Director's Office</div>
         </div>
         {[
@@ -154,7 +148,6 @@ const handleAddVersion = async () => {
           {label:'Requests',  path:'/requests'},
           {label:'Documents', path:'/documents'},
           {label:'Visitors',  path:'/visitors'},
-          {label:'Communication', path:'/communications'},
           {label:'Tasks',     path:'/tasks'},
           {label:'Reports',   path:'/reports'},
           {label:'Settings',  path:'/settings'},
@@ -178,18 +171,13 @@ const handleAddVersion = async () => {
       {/* MAIN */}
       <div style={styles.main}>
         <div style={styles.topbar}>
-          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
-            <div>
-              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>{today}</div>
-            </div>
+          <div>
+            <div style={styles.topbarTitle}>DOP Portal - LNMIIT</div>
+            <div style={styles.topbarSub}>Director's Office Portal</div>
           </div>
           <div style={styles.topbarRight}>
             <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔</div>
-              <button style={styles.logoutTopBtn} onClick={handleLogout}>
-              Logout
-            </button>
+            <div style={styles.rolePill}>👤 {role} ▾</div>
           </div>
         </div>
 
@@ -426,10 +414,6 @@ const styles = {
   versionPanel:  { background:'#fff', borderRadius:'12px', border:'1px solid #E2E8F0', marginTop:'14px', overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' },
   versionHeader: { padding:'14px 16px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' },
   versionTitle:  { fontSize:'13px', fontWeight:'700', color:'#1E293B', marginBottom:'2px' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
-  topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },
 };
 
 export default Documents;

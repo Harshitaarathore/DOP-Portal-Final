@@ -109,7 +109,7 @@ function Requests() {
           { label: 'Settings', path: '/settings' },
         ].map((item, i) => (
           <div key={i}
-            style={{ ...styles.navItem, ...(i === 2 ? styles.navActive : {}) }}
+            style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
             onClick={() => navigate(item.path)}
           >
             {item.label}

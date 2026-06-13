@@ -131,7 +131,7 @@ function AuditLogs() {
           <div style={styles.statRow}>
             {[
               {label:'Total Actions', num:logs.length,                                           bg:'#EFF6FF', color:'#1A3A6B'},
-              {label:'Today',         num:logs.filter(l => l.timestamp.startsWith(new Date().toISOString().split('T')[0])).length},
+              {label:'Today',         num:logs.filter(l=>l.timestamp.startsWith('2026-05-31')).length, bg:'#DCFCE7', color:'#166534'},
               {label:'Approvals',     num:logs.filter(l=>l.action==='Approved').length,          bg:'#DCFCE7', color:'#166534'},
               {label:'Rejections',    num:logs.filter(l=>l.action==='Rejected').length,          bg:'#FEE2E2', color:'#991B1B'},
             ].map((s,i) => (
