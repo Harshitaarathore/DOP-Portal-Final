@@ -96,4 +96,43 @@ const sendMeetingRejectedEmail = async (toEmail, requesterName, purpose) => {
   await apiInstance.sendTransacEmail(sendSmtpEmail);
 };
 
-module.exports = { sendOTPEmail, sendMeetingApprovedEmail, sendMeetingRejectedEmail };
+// 4 — Visitor Approved Email
+const sendVisitorApprovedEmail = async (toEmail, visitorName, organization, visitDate, visitTime) => {
+  const content = `
+    <p>Dear <b>${visitorName}</b>,</p>
+    <p>Your visit request to <b>The LNM Institute of Information Technology, Jaipur</b> has been <b style="color:green;">approved</b>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:bold;">Visitor Name</td>
+        <td style="padding:8px 12px;">${visitorName}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;">Organization</td>
+        <td style="padding:8px 12px;">${organization}</td>
+      </tr>
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:bold;">Visit Date</td>
+        <td style="padding:8px 12px;">${visitDate}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;">Visit Time</td>
+        <td style="padding:8px 12px;">${visitTime}</td>
+      </tr>
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:bold;">Status</td>
+        <td style="padding:8px 12px;color:green;font-weight:bold;">Approved</td>
+      </tr>
+    </table>
+    <p>Please carry a valid photo ID and report to the security gate on your visit day. Show this email as your entry confirmation.</p>
+    <p>For any queries, contact the Director's Office at LNMIIT.</p>
+  `;
+
+  await transporter.sendMail({
+    from: `"DOP Portal - LNMIIT" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: 'DOP Portal — Visitor Request Approved',
+    html: baseTemplate(content)
+  });
+};
+
+module.exports = { sendOTPEmail, sendMeetingApprovedEmail, sendMeetingRejectedEmail, sendVisitorApprovedEmail };

@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
-
+const { sendVisitorApprovedEmail } = require('../utils/email');
 
 const logAudit = (user_id, action, module) => {
   const { v4: uuidv4 } = require('uuid');
@@ -12,7 +12,7 @@ const logAudit = (user_id, action, module) => {
 
 // SUBMIT VISITOR REQUEST
 const submitVisitor = (req, res) => {
-  const { name, organization, purpose, visit_date, visit_time } = req.body;
+  const { name, email, organization, purpose, visit_date, visit_time } = req.body;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -22,9 +22,9 @@ const submitVisitor = (req, res) => {
   }
 
   const id = uuidv4();
-  const sql = `INSERT INTO visitors (id, name, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-  db.query(sql, [id, name, organization, purpose, visit_date, visit_time || '10:00'], (err) => {
+db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00'], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     res.json({ success: true, message: 'Visitor request submitted', data: null });
   });
@@ -41,7 +41,7 @@ const getTodayVisitors = (req, res) => {
 };
 
 // APPROVE VISITOR (Secretary)
-const approveVisitor = (req, res) => {
+const approveVisitor = async (req, res) => {
   const { id } = req.params;
 
   const updateSql = `UPDATE visitors SET approval_status = 'Approved', pass_generated = 1 WHERE id = ?`;
@@ -86,7 +86,15 @@ const approveVisitor = (req, res) => {
         `Organization: ${visitor.organization}`
       ], (err3) => {
         if (err3) console.log('Event creation failed:', err3.message);
-        res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
+        // Send approval email
+if (visitor.email) {
+  try {
+    await sendVisitorApprovedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, visitor.visit_time);
+  } catch (emailErr) {
+    console.log('Visitor approval email failed:', emailErr.message);
+  }
+}
+res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
       });
     });
   });
