@@ -46,18 +46,16 @@ const approveVisitor = async (req, res) => {
 
   const updateSql = `UPDATE visitors SET approval_status = 'Approved', pass_generated = 1 WHERE id = ?`;
 
-  db.query(updateSql, [id], (err) => {
+  db.query(updateSql, [id], async (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     logAudit(req.user.id, 'APPROVED visitor', 'Visitors');
 
     const getSql = `SELECT * FROM visitors WHERE id = ?`;
 
-    db.query(getSql, [id], (err2, results) => {
+    db.query(getSql, [id], async (err2, results) => {
       if (err2 || results.length === 0) return res.json({ success: true, message: 'Visitor approved', data: null });
 
       const visitor = results[0];
-
-
       const eventId = uuidv4();
 
       const rawDate = new Date(visitor.visit_date);
@@ -69,8 +67,6 @@ const approveVisitor = async (req, res) => {
       const endMin = visitTime.split(':')[1];
       const startTime = `${dateStr} ${visitTime}:00`;
       const endTime = `${dateStr} ${endHour}:${endMin}:00`;
-
-
 
       const eventSql = `INSERT INTO events (id, title, description, start_time, end_time, type, visibility, created_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
@@ -84,22 +80,23 @@ const approveVisitor = async (req, res) => {
         'public',
         req.user.id,
         `Organization: ${visitor.organization}`
-      ], (err3) => {
+      ], async (err3) => {
         if (err3) console.log('Event creation failed:', err3.message);
+
         // Send approval email
-if (visitor.email) {
-  try {
-    await sendVisitorApprovedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, visitor.visit_time);
-  } catch (emailErr) {
-    console.log('Visitor approval email failed:', emailErr.message);
-  }
-}
-res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
+        if (visitor.email) {
+          try {
+            await sendVisitorApprovedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, visitor.visit_time);
+          } catch (emailErr) {
+            console.log('Visitor approval email failed:', emailErr.message);
+          }
+        }
+
+        res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
       });
     });
   });
 };
-
 // REJECT VISITOR (Secretary)
 const rejectVisitor = (req, res) => {
   const { id } = req.params;
