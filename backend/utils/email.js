@@ -127,12 +127,13 @@ const sendVisitorApprovedEmail = async (toEmail, visitorName, organization, visi
     <p>For any queries, contact the Director's Office at LNMIIT.</p>
   `;
 
-  await transporter.sendMail({
-    from: `"DOP Portal - LNMIIT" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: 'DOP Portal — Visitor Request Approved',
-    html: baseTemplate(content)
-  });
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.to = [{ email: toEmail }];
+  sendSmtpEmail.sender = { email: 'gshar3010@gmail.com', name: 'DOP Portal - LNMIIT' };
+  sendSmtpEmail.subject = 'DOP Portal — Visitor Request Approved';
+  sendSmtpEmail.htmlContent = baseTemplate(content);
+
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
 };
 
 module.exports = { sendOTPEmail, sendMeetingApprovedEmail, sendMeetingRejectedEmail, sendVisitorApprovedEmail };
