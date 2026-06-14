@@ -42,7 +42,7 @@ function Login() {
       <div style={styles.navbar}>
         <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.navLogo} />
         <span style={styles.navLink} onClick={() => navigate('/visitor-register')}>
-          External visitor? Request an appointment here →
+          External Visitor ? Request an appointment here →
         </span>
       </div>
 
@@ -146,12 +146,8 @@ const styles = {
     height: '40px',
     objectFit: 'contain',
   },
-  navLink: {
-    fontSize: '13px',
-    color: '#2563EB',
-    cursor: 'pointer',
-    fontWeight: '600',
-  },
+  navLink: { fontSize:'13px', color:'#2563EB', cursor:'pointer', fontWeight:'600', textAlign:'right', lineHeight:'1.5' },
+
   cardWrapper: {
     flex: 1,
     display: 'flex',
