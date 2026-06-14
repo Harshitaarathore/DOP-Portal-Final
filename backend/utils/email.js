@@ -10,7 +10,7 @@ const baseTemplate = (content) => `<!DOCTYPE html>
   <table style="background:#fff;width:100%;max-width:560px;margin:auto;border:1px solid #ddd;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
     <tr style="background:#1A3A6B;">
       <td style="text-align:center;padding:20px;">
-        <img src="C:\Users\Garv Sharma\Documents\OneDrive - JK LAKSHMIPAT UNIVERSITY\Desktop\Backend\DOP-Portal-Final\Frontend\src\assets\lnmiit-logo.png" style="width:160px;background:#fff;padding:8px;border-radius:6px;">
+        <img src="https://lnmiit.ac.in/wp-content/uploads/2022/05/LNMIIT-Logo.png" style="width:160px;background:#fff;padding:8px;border-radius:6px;">
         <div style="color:#fff;font-size:13px;font-weight:700;margin-top:8px;">Director's Office Portal</div>
         <div style="color:rgba(255,255,255,0.7);font-size:10px;">The LNM Institute of Information Technology, Jaipur</div>
       </td>
