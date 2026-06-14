@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
+import campusBg from '../assets/campus_lnmiit.jpg';
 
 function VisitorRegister() {
   const navigate = useNavigate();
@@ -64,19 +65,13 @@ function VisitorRegister() {
   return (
     <div style={styles.page}>
 
-      {/* HEADER */}
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <img src={lnmiitLogo} alt="LNMIIT" style={styles.headerLogo} />
-          <div>
-            <div style={styles.headerTitle}>Director Office Portal</div>
-            <div style={styles.headerSub}>Director's Office Visitor Registration — LNMIIT</div>
-          </div>
-        </div>
-        <button style={styles.loginBtn} onClick={() => navigate('/')}>
-          Already registered? Login →
-        </button>
-      </div>
+  {/* NAVBAR */}
+  <div style={styles.navbar}>
+    <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.navLogo} />
+    <button style={styles.loginBtn} onClick={() => navigate('/')}>
+      Already registered? Login →
+    </button>
+  </div>
 
       {/* CONTENT */}
       <div style={styles.content}>
@@ -295,14 +290,11 @@ function VisitorRegister() {
 }
 
 const styles = {
-  page:               { minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F0F4FA' },
-  header:             { background:'#1A3A6B', padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between' },
-  headerLeft:         { display:'flex', alignItems:'center', gap:'12px' },
-  headerLogo:         { width:'80px', objectFit:'contain', background:'#fff', borderRadius:'6px', padding:'4px' },
-  headerTitle:        { color:'#fff', fontSize:'14px', fontWeight:'700' },
-  headerSub:          { color:'rgba(255,255,255,0.6)', fontSize:'10px' },
-  loginBtn:           { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'8px', padding:'7px 16px', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' },
-  content:            { maxWidth:'680px', margin:'32px auto', padding:'0 20px' },
+ page:    { minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", backgroundImage:`url(${campusBg})`, backgroundSize:'cover', backgroundPosition:'center' },
+navbar:  { position:'fixed', top:0, left:0, right:0, height:'60px', background:'#fff', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', boxShadow:'0 1px 6px rgba(0,0,0,0.08)', zIndex:10 },
+navLogo: { height:'40px', objectFit:'contain' },
+loginBtn:{ background:'#1A3A6B', border:'none', borderRadius:'4px', padding:'8px 16px', color:'#fff', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+content: { maxWidth:'680px', margin:'0 auto', padding:'80px 20px 32px' },
   successCard:        { background:'#fff', borderRadius:'12px', border:'1px solid #E2E8F0', padding:'32px', textAlign:'center', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' },
   successIcon:        { fontSize:'48px', marginBottom:'14px' },
   successTitle:       { fontSize:'18px', fontWeight:'700', color:'#1E293B', marginBottom:'10px' },
