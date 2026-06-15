@@ -426,7 +426,7 @@ const styles = {
   versionPanel:  { background:'#fff', borderRadius:'12px', border:'1px solid #E2E8F0', marginTop:'14px', overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' },
   versionHeader: { padding:'14px 16px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' },
   versionTitle:  { fontSize:'13px', fontWeight:'700', color:'#1E293B', marginBottom:'2px' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+ logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
   lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
   topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
   topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },

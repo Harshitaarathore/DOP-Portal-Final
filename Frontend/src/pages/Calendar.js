@@ -542,7 +542,7 @@ const styles = {
   topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },
   topbarRight: { display: 'flex', alignItems: 'center', gap: '10px' },
   notifBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+  logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
   content: { flex: 1, overflowY: 'auto', padding: '18px 22px' },
   pageHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' },
   pageTitle: { fontSize: '16px', fontWeight: '700', color: '#1E293B' },
