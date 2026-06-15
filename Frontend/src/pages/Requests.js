@@ -11,13 +11,16 @@ function Requests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredStat, setHoveredStat] = useState(null); // FIX 1
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
+  const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  useEffect(() => { fetchRequests(); }, []);
 
   const fetchRequests = async () => {
     try {
@@ -35,154 +38,147 @@ function Requests() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-  };
+  const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
   const handleApprove = async (id) => {
     try {
       const res = await API.put(`/meetings/${id}/approve`);
-      if (res.data.success) {
-        alert('Request approved!');
-        fetchRequests();
-        setSelectedRequest(null);
-      }
-    } catch (err) {
-      alert('Failed to approve');
-    }
+      if (res.data.success) { alert('Request approved!'); fetchRequests(); setSelectedRequest(null); }
+    } catch { alert('Failed to approve'); }
   };
 
   const handleReject = async (id) => {
     try {
       const res = await API.put(`/meetings/${id}/reject`);
-      if (res.data.success) {
-        alert('Request rejected!');
-        fetchRequests();
-        setSelectedRequest(null);
-      }
-    } catch (err) {
-      alert('Failed to reject');
-    }
+      if (res.data.success) { alert('Request rejected!'); fetchRequests(); setSelectedRequest(null); }
+    } catch { alert('Failed to reject'); }
   };
 
   const handleSaveNotes = async (id) => {
     try {
       const res = await API.put(`/meetings/${id}/notes`, { internal_notes: internalNote });
-      if (res.data.success) {
-        setNoteSaved(true);
-        setTimeout(() => setNoteSaved(false), 2000);
-        fetchRequests();
-      }
-    } catch (err) {
-      alert('Failed to save notes');
-    }
+      if (res.data.success) { setNoteSaved(true); setTimeout(() => setNoteSaved(false), 2000); fetchRequests(); }
+    } catch { alert('Failed to save notes'); }
   };
 
   const filtered = activeTab === 'all' ? requests :
     activeTab === 'pending' ? requests.filter(r => r.status === 'Pending') :
-      activeTab === 'approved' ? requests.filter(r => r.status === 'Approved') :
-        requests.filter(r => r.status === 'Rejected');
+    activeTab === 'approved' ? requests.filter(r => r.status === 'Approved') :
+    requests.filter(r => r.status === 'Rejected');
 
-  const priBg = { High: '#FEE2E2', Medium: '#DBEAFE', Low: '#DCFCE7' };
+  const priBg    = { High: '#FEE2E2', Medium: '#DBEAFE', Low: '#DCFCE7' };
   const priColor = { High: '#991B1B', Medium: '#1E40AF', Low: '#166534' };
-  const stBg = { Pending: '#FEF3C7', Approved: '#DCFCE7', Rejected: '#FEE2E2', Rescheduled: '#EDE9FE' };
-  const stColor = { Pending: '#92400E', Approved: '#166534', Rejected: '#991B1B', Rescheduled: '#5B21B6' };
+  const stBg     = { Pending: '#FEF3C7', Approved: '#DCFCE7', Rejected: '#FEE2E2', Rescheduled: '#EDE9FE' };
+  const stColor  = { Pending: '#92400E', Approved: '#166534', Rejected: '#991B1B', Rescheduled: '#5B21B6' };
+
+  const navItems = [
+    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Calendar',      path:'/calendar',       icon:'📅' },
+    { label:'Requests',      path:'/requests',       icon:'📋' },
+    { label:'Documents',     path:'/documents',      icon:'📁' },
+    { label:'Visitors',      path:'/visitors',       icon:'👥' },
+    { label:'Communication', path:'/communications', icon:'💬' },
+    { label:'Tasks',         path:'/tasks',          icon:'✅' },
+    { label:'Announcements', path:'/announcements',  icon:'📢' },
+    { label:'Reports',       path:'/reports',        icon:'📊' },
+    { label:'Settings',      path:'/settings',       icon:'⚙️' },
+  ];
+
+  const stats = [
+    { label:'Total',    num: requests.length,                                    bg:'#EFF6FF', color:'#1A3A6B' },
+    { label:'Pending',  num: requests.filter(r => r.status==='Pending').length,  bg:'#FEF3C7', color:'#92400E' },
+    { label:'Approved', num: requests.filter(r => r.status==='Approved').length, bg:'#DCFCE7', color:'#166534' },
+    { label:'Rejected', num: requests.filter(r => r.status==='Rejected').length, bg:'#FEE2E2', color:'#991B1B' },
+  ];
 
   return (
-    <div style={styles.page}>
+    <div style={S.page}>
 
-      {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
-          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          {/* <div style={styles.logoTitle}>DOP Portal</div> */}
-          <div style={styles.logoSub}>Director's Office</div>
+      {/* SIDEBAR — identical structure to Calendar.js */}
+      <div style={S.sidebar}>
+        {/* FIX 2 & 3: removed sidebarFooter, matched Calendar sidebar exactly */}
+        <div style={S.logoWrap}>
+          <img src={lnmiitLogo} alt="LNMIIT" style={S.logo} />
         </div>
-        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E2E8F0' }}>
-          <div style={{ color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px' }}>Director's Office Portal</div>
-          <div style={{ color:'#64748B', fontSize:'11px', fontWeight:'500' }}>{new Date().toLocaleDateString('en-US', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
+        <div style={S.portalBanner}>
+          <div style={S.portalName}>Director's Office Portal</div>
+          <div style={S.portalDate}>{today}</div>
         </div>
-        {[
-          { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
-          { label:'Calendar',      path:'/calendar',       icon:'📅' },
-          { label:'Requests',      path:'/requests',       icon:'📋' },
-          { label:'Documents',     path:'/documents',      icon:'📁' },
-          { label:'Visitors',      path:'/visitors',       icon:'👥' },
-          { label:'Communication', path:'/communications', icon:'💬' },
-          { label:'Tasks',         path:'/tasks',          icon:'✅' },
-          { label:'Announcements', path:'/announcements',  icon:'📢' },
-          { label:'Reports',       path:'/reports',        icon:'📊' },
-          { label:'Settings',      path:'/settings',       icon:'⚙️' },
-        ].map((item, i) => (
-        <div key={i}
-          style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
-          onClick={() => navigate(item.path)}>
-          <span style={{ fontSize:'14px', marginRight:'8px' }}>{item.icon}</span>{item.label}
-        </div>
+        <div style={S.divider} />
+        {navItems.map((item, i) => (
+          <div key={i}
+            style={{
+              ...S.navItem,
+              ...(item.path === window.location.pathname ? S.navActive : {}),
+              ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {})
+            }}
+            onMouseEnter={() => setHoveredNav(i)}
+            onMouseLeave={() => setHoveredNav(null)}
+            onClick={() => navigate(item.path)}
+          >
+            <span style={S.navIcon}>{item.icon}</span>{item.label}
+          </div>
         ))}
-        
-
-        <div style={styles.sidebarFooter}>
-          <div style={styles.avatar}>{initials}</div>
-            <div style={{ flex:1 }}>
-              <div style={styles.userName}>{name}</div>
-              <div style={styles.userRole}>{role}</div>
-            </div>
-        </div>
       </div>
 
       {/* MAIN */}
-      <div style={styles.main}>
+      <div style={S.main}>
 
-        {/* TOPBAR — logo + title on left, notif + logout on right */}
-        <div style={styles.topbar}>
-  <div style={styles.topbarUser}>
-    <div style={styles.topbarAvatar}>{initials}</div>
-    <div>
-      <div style={styles.topbarUserName}>{name}</div>
-      <div style={styles.topbarUserRole}>{role}</div>
-    </div>
-  </div>
-  <div style={styles.topbarRight}>
-    <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔</div>
-    <button style={{...styles.logoutTopBtn, background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B'}} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
-    <button style={styles.logoutTopBtn} onClick={handleLogout}>⏻ Logout</button>
-  </div>
-</div>
-
-        <div style={styles.content}>
-          <div style={styles.pageHeader}>
+        {/* TOPBAR */}
+        <div style={S.topbar}>
+          <div style={S.topbarUser}>
+            <div style={S.topbarAvatar}>{initials}</div>
             <div>
-              <div style={styles.pageTitle}>📋 Requests</div>
-              <div style={styles.pageSub}>
+              <div style={S.topbarUserName}>{name}</div>
+              <div style={S.topbarUserEmail}>{email}</div>
+              <div style={S.topbarUserRole}>{role}</div>
+            </div>
+          </div>
+          <div style={S.topbarRight}>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔</div>
+            {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
+            <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
+          </div>
+        </div>
+
+        <div style={S.content}>
+          <div style={S.pageHeader}>
+            <div>
+              <div style={S.pageTitle}>📋 Requests</div>
+              <div style={S.pageSub}>
                 {role === 'Director' ? 'You can approve or reject requests' :
-                  role === 'Secretary' ? 'All incoming requests - only Director can approve or reject' :
-                    'Your submitted requests'}
+                  role === 'Secretary' ? 'Review and approve or reject incoming requests' :
+                  'Your submitted requests'}
               </div>
             </div>
           </div>
 
-          {/* STAT ROW */}
-          <div style={styles.statRow}>
-            {[
-              { label: 'Total', num: requests.length, bg: '#EFF6FF', color: '#1A3A6B' },
-              { label: 'Pending', num: requests.filter(r => r.status === 'Pending').length, bg: '#FEF3C7', color: '#92400E' },
-              { label: 'Approved', num: requests.filter(r => r.status === 'Approved').length, bg: '#DCFCE7', color: '#166534' },
-              { label: 'Rejected', num: requests.filter(r => r.status === 'Rejected').length, bg: '#FEE2E2', color: '#991B1B' },
-            ].map((s, i) => (
-              <div key={i} style={{ ...styles.statCard, background: s.bg }}>
-                <div style={{ ...styles.statNum, color: s.color }}>{s.num}</div>
-                <div style={styles.statLabel}>{s.label}</div>
+          {/* STAT ROW — FIX 1: hover effect */}
+          <div style={S.statRow}>
+            {stats.map((s, i) => (
+              <div key={i}
+                style={{
+                  ...S.statCard,
+                  background: s.bg,
+                  transform: hoveredStat === i ? 'translateY(-2px)' : 'none',
+                  boxShadow: hoveredStat === i ? '0 6px 16px rgba(0,0,0,0.10)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'all 0.18s ease',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={() => setHoveredStat(i)}
+                onMouseLeave={() => setHoveredStat(null)}
+              >
+                <div style={{ ...S.statNum, color: s.color }}>{s.num}</div>
+                <div style={S.statLabel}>{s.label}</div>
               </div>
             ))}
           </div>
 
           {/* TABS */}
-          <div style={styles.tabs}>
+          <div style={S.tabs}>
             {['all', 'pending', 'approved', 'rejected'].map(tab => (
               <div key={tab}
-                style={{ ...styles.tab, ...(activeTab === tab ? styles.tabActive : {}) }}
+                style={{ ...S.tab, ...(activeTab === tab ? S.tabActive : {}) }}
                 onClick={() => setActiveTab(tab)}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -190,120 +186,110 @@ function Requests() {
             ))}
           </div>
 
-          <div style={styles.layout}>
+          <div style={S.layout}>
             {/* LEFT - REQUEST LIST */}
-            <div style={styles.listPanel}>
+            <div style={S.listPanel}>
               {loading ? (
-                <div style={styles.emptyMsg}>Loading...</div>
+                <div style={S.emptyMsg}>Loading...</div>
               ) : filtered.length === 0 ? (
-                <div style={styles.emptyMsg}>No requests found</div>
+                <div style={S.emptyMsg}>No requests found</div>
               ) : filtered.map(req => (
                 <div key={req.id}
-                  style={{ ...styles.reqCard, ...(selectedRequest?.id === req.id ? styles.reqCardActive : {}) }}
+                  style={{ ...S.reqCard, ...(selectedRequest?.id === req.id ? S.reqCardActive : {}) }}
                   onClick={() => setSelectedRequest(req)}
                 >
-                  <div style={styles.reqTop}>
-                    <div style={{ ...styles.reqAvatar, background: '#1A3A6B' }}>
+                  <div style={S.reqTop}>
+                    <div style={{ ...S.reqAvatar, background:'#1A3A6B' }}>
                       {req.requester_name ? req.requester_name[0].toUpperCase() : 'R'}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={styles.reqName}>{req.requester_name || 'Unknown'}</div>
-                      <div style={styles.reqDept}>{req.department || 'No department'} · {req.purpose ? req.purpose.slice(0, 20) + '...' : ''}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={S.reqName}>{req.requester_name || 'Unknown'}</div>
+                      <div style={S.reqDept}>{req.department || 'No department'} · {req.purpose ? req.purpose.slice(0,20)+'...' : ''}</div>
                     </div>
-                    <span style={{ ...styles.badge2, background: stBg[req.status], color: stColor[req.status] }}>{req.status}</span>
+                    <span style={{ ...S.badge2, background:stBg[req.status], color:stColor[req.status] }}>{req.status}</span>
                   </div>
-                  <div style={styles.reqMid}>
-                    <span style={styles.reqType}>Meeting Request</span>
-                    <span style={{ ...styles.badge2, background: priBg[req.priority], color: priColor[req.priority] }}>{req.priority}</span>
+                  <div style={S.reqMid}>
+                    <span style={S.reqType}>Meeting Request</span>
+                    <span style={{ ...S.badge2, background:priBg[req.priority], color:priColor[req.priority] }}>{req.priority}</span>
                   </div>
-                  <div style={styles.reqDate}>📅 {req.preferred_time || 'No time specified'}</div>
+                  <div style={S.reqDate}>📅 {req.preferred_time || 'No time specified'}</div>
                 </div>
               ))}
             </div>
 
             {/* RIGHT - REQUEST DETAIL */}
-            <div style={styles.detailPanel}>
+            <div style={S.detailPanel}>
               {selectedRequest ? (
                 <>
-                  <div style={styles.detailHeader}>
-                    <div style={{ ...styles.reqAvatar, width: '44px', height: '44px', fontSize: '14px', background: '#1A3A6B' }}>
+                  <div style={S.detailHeader}>
+                    <div style={{ ...S.reqAvatar, width:'44px', height:'44px', fontSize:'14px', background:'#1A3A6B' }}>
                       {selectedRequest.purpose ? selectedRequest.purpose[0].toUpperCase() : 'R'}
                     </div>
                     <div>
-                      <div style={styles.detailName}>{selectedRequest.requester_name || 'Unknown'}</div>
-                      <div style={styles.detailDept}>{selectedRequest.department || 'No department'}</div>
+                      <div style={S.detailName}>{selectedRequest.requester_name || 'Unknown'}</div>
+                      <div style={S.detailDept}>{selectedRequest.department || 'No department'}</div>
                     </div>
                   </div>
-
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Priority</span>
-                    <span style={{ ...styles.badge2, background: priBg[selectedRequest.priority], color: priColor[selectedRequest.priority] }}>{selectedRequest.priority}</span>
+                  <div style={S.detailRow}>
+                    <span style={S.detailLabel}>Priority</span>
+                    <span style={{ ...S.badge2, background:priBg[selectedRequest.priority], color:priColor[selectedRequest.priority] }}>{selectedRequest.priority}</span>
                   </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Status</span>
-                    <span style={{ ...styles.badge2, background: stBg[selectedRequest.status], color: stColor[selectedRequest.status] }}>{selectedRequest.status}</span>
+                  <div style={S.detailRow}>
+                    <span style={S.detailLabel}>Status</span>
+                    <span style={{ ...S.badge2, background:stBg[selectedRequest.status], color:stColor[selectedRequest.status] }}>{selectedRequest.status}</span>
                   </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Preferred Date</span>
-                    <span style={styles.detailValue}>{selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toLocaleDateString() : 'N/A'}</span>
+                  <div style={S.detailRow}>
+                    <span style={S.detailLabel}>Preferred Date</span>
+                    <span style={S.detailValue}>{selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toLocaleDateString() : 'N/A'}</span>
                   </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Preferred Time</span>
-                    <span style={styles.detailValue}>{selectedRequest.preferred_time || 'N/A'}</span>
+                  <div style={S.detailRow}>
+                    <span style={S.detailLabel}>Preferred Time</span>
+                    <span style={S.detailValue}>{selectedRequest.preferred_time || 'N/A'}</span>
                   </div>
-
-                  <div style={styles.detailDesc}>
-                    <div style={styles.detailLabel}>Purpose</div>
-                    <div style={styles.descText}>{selectedRequest.purpose}</div>
-
-                    {/* INTERNAL NOTES - Secretary only */}
+                  <div style={S.detailDesc}>
+                    <div style={S.detailLabel}>Purpose</div>
+                    <div style={S.descText}>{selectedRequest.purpose}</div>
                     {role === 'Secretary' && (
-                      <div style={{ marginTop: '14px' }}>
-                        <div style={styles.detailLabel}>🔒 Internal Notes (hidden from requester)</div>
+                      <div style={{ marginTop:'14px' }}>
+                        <div style={S.detailLabel}>🔒 Internal Notes (hidden from requester)</div>
                         <textarea
-                          style={{ ...styles.descText, width: '100%', marginTop: '6px', resize: 'vertical', height: '60px', outline: 'none', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px', fontSize: '11px', boxSizing: 'border-box' }}
+                          style={{ ...S.descText, width:'100%', marginTop:'6px', resize:'vertical', height:'60px', outline:'none', border:'1px solid #E2E8F0', borderRadius:'8px', padding:'8px', fontSize:'11px', boxSizing:'border-box' }}
                           placeholder="Add internal notes..."
                           value={internalNote || selectedRequest.internal_notes || ''}
                           onChange={e => setInternalNote(e.target.value)}
                         />
-                        <button style={{ ...styles.forwardBtn, marginTop: '6px', background: '#475569' }} onClick={() => handleSaveNotes(selectedRequest.id)}>
+                        <button style={{ ...S.forwardBtn, marginTop:'6px', background:'#475569' }} onClick={() => handleSaveNotes(selectedRequest.id)}>
                           {noteSaved ? '✓ Saved!' : 'Save Notes'}
                         </button>
                       </div>
                     )}
-
-                    {/* SHOW EXISTING NOTES for Director */}
                     {role === 'Director' && selectedRequest.internal_notes && (
-                      <div style={{ marginTop: '14px' }}>
-                        <div style={styles.detailLabel}>🔒 Internal Notes</div>
-                        <div style={styles.descText}>{selectedRequest.internal_notes}</div>
+                      <div style={{ marginTop:'14px' }}>
+                        <div style={S.detailLabel}>🔒 Internal Notes</div>
+                        <div style={S.descText}>{selectedRequest.internal_notes}</div>
                       </div>
                     )}
                   </div>
-
-                  {/* APPROVE/REJECT - Director only */}
-                  {selectedRequest.status === 'Pending' && role === 'Director' && (
-                    <div style={styles.actionNote}>
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                        <button style={styles.approveBtn} onClick={() => handleApprove(selectedRequest.id)}>✓ Approve</button>
-                        <button style={styles.rejectBtn} onClick={() => handleReject(selectedRequest.id)}>✗ Reject</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRequest.status === 'Pending' && role === 'Secretary' && (
-                    <div style={styles.actionNote}>
-                      <div style={styles.noteBox}>
-                        🔒 Only the <strong>Director</strong> can approve or reject this request.
-                      </div>
-                    </div>
-                  )}
+                  {/* APPROVE/REJECT - Secretary (primary) + Director (override) per SRS §5.4 */}
+{selectedRequest.status === 'Pending' && (role === 'Secretary' || role === 'Director') && (
+  <div style={S.actionNote}>
+    {role === 'Director' && (
+      <div style={S.noteBox}>
+        ℹ️ The <strong>Secretary</strong> typically handles approvals. You may override below.
+      </div>
+    )}
+    <div style={{ display: 'flex', gap: '10px', marginTop: role === 'Director' ? '8px' : '16px' }}>
+      <button style={S.approveBtn} onClick={() => handleApprove(selectedRequest.id)}>✓ Approve</button>
+      <button style={S.rejectBtn} onClick={() => handleReject(selectedRequest.id)}>✗ Reject</button>
+    </div>
+  </div>
+)}
                 </>
               ) : (
-                <div style={styles.noSelection}>
-                  <div style={{ fontSize: '32px', marginBottom: '10px' }}>📋</div>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1E293B' }}>Select a request</div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Click any request to view details</div>
+                <div style={S.noSelection}>
+                  <div style={{ fontSize:'32px', marginBottom:'10px' }}>📋</div>
+                  <div style={{ fontSize:'13px', fontWeight:'600', color:'#1E293B' }}>Select a request</div>
+                  <div style={{ fontSize:'11px', color:'#94A3B8', marginTop:'4px' }}>Click any request to view details</div>
                 </div>
               )}
             </div>
@@ -314,88 +300,76 @@ function Requests() {
   );
 }
 
-const styles = {
-  page:          { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
-  
-  // Sidebar — white, same as Calendar
-  sidebar:       { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
-  sidebarLogo:   { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
-  lnmiitLogo:    { width:'130px', objectFit:'contain' },
-  logoTitle:     { display:'none' },
-  logoSub:       { display:'none' },
-  navItem:       { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
-  navActive:     { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
-  sidebarFooter: { marginTop:'auto', padding:'14px 16px', borderTop:'1px solid #E2E8F0', display:'flex', alignItems:'center', gap:'8px' },
-  avatar:        { width:'32px', height:'32px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
-  userName:      { color:'#1E293B', fontSize:'11px', fontWeight:'600' },
-  userRole:      { color:'#94A3B8', fontSize:'9px' },
-
+const S = {
+  page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  // Sidebar — exact copy of Calendar.js sidebar styles
+  sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+  logoWrap:       { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+  logo:           { width:'130px', objectFit:'contain' },
+  portalBanner:   { padding:'14px 16px' },
+  portalName:     { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px', fontFamily:"'DM Sans',sans-serif" },
+  portalDate:     { color:'#64748B', fontSize:'11px', fontWeight:'500', fontFamily:"'DM Sans',sans-serif" },
+  divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none' },
+  navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+  navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
   // Main
-  main:          { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
-
-  // Topbar — white, same as Calendar
-  topbar:        { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
-  topbarLogo:    { display:'none' },
-  topbarTitle:   { display:'none' },
-  topbarSub:     { display:'none' },
-  topbarRight:   { display:'flex', alignItems:'center', gap:'8px' },
-  notifBtn:      { background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
-  logoutTopBtn:  { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
+  topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
   topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
-topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
-topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
-topbarUserRole: { color:'#64748B', fontSize:'10px' },
-
+  topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
+  topbarUserEmail:{ color:'#94A3B8', fontSize:'9px' },
+  topbarUserRole: { color:'#64748B', fontSize:'10px' },
+  topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
+  notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
+  btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   // Content
-  content:       { flex:1, overflowY:'auto', padding:'16px 20px' },
-  pageHeader:    { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
-  pageTitle:     { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
-  pageSub:       { fontSize:'11px', color:'#64748B', marginTop:'2px' },
-
+  content:        { flex:1, overflowY:'auto', padding:'16px 20px' },
+  pageHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
+  pageTitle:      { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
+  pageSub:        { fontSize:'11px', color:'#64748B', marginTop:'2px' },
   // Stats
-  statRow:       { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'14px' },
-  statCard:      { borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #E2E8F0' },
-  statNum:       { fontSize:'22px', fontWeight:'700', lineHeight:1 },
-  statLabel:     { fontSize:'10px', color:'#64748B', fontWeight:'500' },
-
+  statRow:        { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'14px' },
+  statCard:       { borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #E2E8F0' },
+  statNum:        { fontSize:'22px', fontWeight:'700', lineHeight:1 },
+  statLabel:      { fontSize:'10px', color:'#64748B', fontWeight:'500' },
   // Tabs
-  tabs:          { display:'flex', gap:'4px', marginBottom:'14px', background:'#F1F5F9', padding:'4px', borderRadius:'8px', border:'1px solid #E2E8F0', width:'fit-content' },
-  tab:           { padding:'7px 18px', borderRadius:'6px', fontSize:'12px', fontWeight:'600', color:'#64748B', cursor:'pointer' },
-  tabActive:     { background:'#1A3A6B', color:'#fff' },
-
+  tabs:           { display:'flex', gap:'4px', marginBottom:'14px', background:'#F1F5F9', padding:'4px', borderRadius:'8px', border:'1px solid #E2E8F0', width:'fit-content' },
+  tab:            { padding:'7px 18px', borderRadius:'6px', fontSize:'12px', fontWeight:'600', color:'#64748B', cursor:'pointer' },
+  tabActive:      { background:'#1A3A6B', color:'#fff' },
   // Layout
-  layout:        { display:'grid', gridTemplateColumns:'1.2fr 1fr', gap:'14px' },
-  listPanel:     { display:'flex', flexDirection:'column', gap:'8px', overflowY:'auto', maxHeight:'calc(100vh - 280px)' },
-
+  layout:         { display:'grid', gridTemplateColumns:'1.2fr 1fr', gap:'14px' },
+  listPanel:      { display:'flex', flexDirection:'column', gap:'8px', overflowY:'auto', maxHeight:'calc(100vh - 280px)' },
   // Request cards
-  reqCard:       { background:'#fff', borderRadius:'10px', padding:'12px 14px', border:'1px solid #E2E8F0', cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' },
-  reqCardActive: { border:'2px solid #2563EB', background:'#EFF6FF' },
-  reqTop:        { display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px' },
-  reqAvatar:     { width:'34px', height:'34px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
-  reqName:       { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
-  reqDept:       { fontSize:'10px', color:'#94A3B8' },
-  reqMid:        { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' },
-  reqType:       { fontSize:'11px', color:'#475569', fontWeight:'500' },
-  reqDate:       { fontSize:'10px', color:'#94A3B8' },
-  badge2:        { fontSize:'9px', fontWeight:'700', padding:'3px 9px', borderRadius:'10px', flexShrink:0 },
-
+  reqCard:        { background:'#fff', borderRadius:'10px', padding:'12px 14px', border:'1px solid #E2E8F0', cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' },
+  reqCardActive:  { border:'2px solid #2563EB', background:'#EFF6FF' },
+  reqTop:         { display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px' },
+  reqAvatar:      { width:'34px', height:'34px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  reqName:        { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
+  reqDept:        { fontSize:'10px', color:'#94A3B8' },
+  reqMid:         { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' },
+  reqType:        { fontSize:'11px', color:'#475569', fontWeight:'500' },
+  reqDate:        { fontSize:'10px', color:'#94A3B8' },
+  badge2:         { fontSize:'9px', fontWeight:'700', padding:'3px 9px', borderRadius:'10px', flexShrink:0 },
   // Detail panel
-  detailPanel:   { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'18px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflowY:'auto', maxHeight:'calc(100vh - 200px)' },
-  detailHeader:  { display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px', paddingBottom:'14px', borderBottom:'1px solid #F1F5F9' },
-  detailName:    { fontSize:'14px', fontWeight:'700', color:'#1E293B' },
-  detailDept:    { fontSize:'11px', color:'#94A3B8', marginTop:'2px' },
-  detailRow:     { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F8FAFC' },
-  detailLabel:   { fontSize:'11px', color:'#64748B', fontWeight:'600' },
-  detailValue:   { fontSize:'11px', color:'#1E293B', fontWeight:'500' },
-  detailDesc:    { marginTop:'14px' },
-  descText:      { fontSize:'11px', color:'#475569', lineHeight:1.7, marginTop:'6px', background:'#F8FAFC', padding:'12px', borderRadius:'8px' },
-  actionNote:    { marginTop:'16px' },
-  noteBox:       { background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:'8px', padding:'10px 13px', fontSize:'10px', color:'#92400E', lineHeight:1.6, marginBottom:'12px' },
-  approveBtn:    { flex:1, background:'#166534', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
-  rejectBtn:     { flex:1, background:'#991B1B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
-  forwardBtn:    { width:'100%', background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
-  noSelection:   { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', color:'#94A3B8' },
-  emptyMsg:      { padding:'20px', textAlign:'center', fontSize:'12px', color:'#94A3B8' },
+  detailPanel:    { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'18px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflowY:'auto', maxHeight:'calc(100vh - 200px)' },
+  detailHeader:   { display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px', paddingBottom:'14px', borderBottom:'1px solid #F1F5F9' },
+  detailName:     { fontSize:'14px', fontWeight:'700', color:'#1E293B' },
+  detailDept:     { fontSize:'11px', color:'#94A3B8', marginTop:'2px' },
+  detailRow:      { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F8FAFC' },
+  detailLabel:    { fontSize:'11px', color:'#64748B', fontWeight:'600' },
+  detailValue:    { fontSize:'11px', color:'#1E293B', fontWeight:'500' },
+  detailDesc:     { marginTop:'14px' },
+  descText:       { fontSize:'11px', color:'#475569', lineHeight:1.7, marginTop:'6px', background:'#F8FAFC', padding:'12px', borderRadius:'8px' },
+  actionNote:     { marginTop:'16px' },
+  noteBox:        { background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:'8px', padding:'10px 13px', fontSize:'10px', color:'#92400E', lineHeight:1.6, marginBottom:'12px' },
+  approveBtn:     { flex:1, background:'#166534', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  rejectBtn:      { flex:1, background:'#991B1B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  forwardBtn:     { width:'100%', background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  noSelection:    { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', color:'#94A3B8' },
+  emptyMsg:       { padding:'20px', textAlign:'center', fontSize:'12px', color:'#94A3B8' },
 };
 
 export default Requests;

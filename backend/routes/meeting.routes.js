@@ -6,8 +6,8 @@ const { upload, submitRequest, getAllRequests, approveRequest, rejectRequest, re
 
 router.post('/request', verifyToken, upload.single('attachment'), submitRequest);
 router.get('/all', verifyToken, allowRoles('Secretary', 'Director'), getAllRequests);
-router.put('/:id/approve', verifyToken, allowRoles('Director'), approveRequest);
-router.put('/:id/reject', verifyToken, allowRoles('Director'), rejectRequest);
+router.put('/:id/approve', verifyToken, allowRoles('Secretary', 'Director'), approveRequest);
+router.put('/:id/reject', verifyToken, allowRoles('Secretary', 'Director'), rejectRequest);
 router.put('/:id/reschedule', verifyToken, allowRoles('Secretary'), rescheduleRequest);
 router.get('/my', verifyToken, getMyRequests);
 router.put('/:id/notes', verifyToken, allowRoles('Secretary', 'Director'), addInternalNotes);
