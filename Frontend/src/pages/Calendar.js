@@ -119,8 +119,18 @@ function Calendar() {
   const selectedDayEvents = eventsByDay[selectedDay] || [];
   const selectedDayTasks  = tasksByDay[selectedDay]  || [];
   const nowDate = new Date();
-  const upcoming = events.filter(ev => new Date(ev.start_time) > nowDate).sort((a,b) => new Date(a.start_time)-new Date(b.start_time)).slice(0,5);
-  const upcomingTasks = tasks.filter(t => t.deadline && new Date(t.deadline) > nowDate && t.status !== 'Completed').sort((a,b) => new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
+  const todayEnd = new Date();
+todayEnd.setHours(23,59,59,999);
+
+const upcoming = events
+  .filter(ev => new Date(ev.start_time) > todayEnd)
+  .sort((a,b) => new Date(a.start_time)-new Date(b.start_time))
+  .slice(0,5);
+
+const upcomingTasks = tasks
+  .filter(t => t.deadline && new Date(t.deadline) > todayEnd && t.status !== 'Completed')
+  .sort((a,b) => new Date(a.deadline)-new Date(b.deadline))
+  .slice(0,5);
 
   const getWeekDays = () => {
     const tod = new Date();
@@ -460,7 +470,7 @@ function Calendar() {
                       {isTask ? (item.status||'Pending') : item.type}
                     </span>
                     {!isTask && canManage && (
-                      <button style={S.deleteBtn} onClick={() => handleDeleteEvent(item.id)}>🗑</button>
+                      <button style={{...S.deleteBtn, padding:'6px 14px', fontSize:'12px'}} onClick={() => handleDeleteEvent(item.id)}>🗑 Delete</button>
                     )}
                   </div>
                 );
