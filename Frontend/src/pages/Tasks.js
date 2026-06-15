@@ -325,7 +325,7 @@ const styles = {
   badge2: { fontSize: '9px', fontWeight: '700', padding: '3px 9px', borderRadius: '10px', flexShrink: 0 },
   deleteBtn: { background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', cursor: 'pointer' },
   emptyMsg: { padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94A3B8' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+ logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
   lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
   topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
   topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },

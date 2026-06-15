@@ -344,7 +344,7 @@ const styles = {
   approveBtnLg: { flex: 1, background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
   rejectBtnLg: { flex: 1, background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
   noSelection: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' },
-  logoutTopBtn:  { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+ logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
   lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
 topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
 
