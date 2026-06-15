@@ -191,7 +191,7 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
 };
 
   return (
-    <div style={S.page}>
+    <div style={S.page} className="page-transition">
 
       {/* ── SIDEBAR ── */}
       <div style={S.sidebar}>
@@ -541,15 +541,14 @@ const S = {
 
   // SIDEBAR
   logoWrap:    { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
-logo:        { width:'130px', objectFit:'contain' },
-portalBanner: { padding:'14px 16px', borderBottom:'1px solid #E2E8F0' },
-portalName:   { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px', fontFamily:"'DM Sans',sans-serif" },
-portalInst:   null, // DELETE this line entirely
-portalDate:   { color:'#64748B', fontSize:'11px', fontWeight:'500', fontFamily:"'DM Sans',sans-serif" },
-sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
-divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
-navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none' },
-navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+  logo:        { width:'130px', objectFit:'contain' },
+  portalBanner: { padding:'14px 16px'},
+  portalName:   { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px', fontFamily:"'DM Sans',sans-serif" },
+  portalDate:   { color:'#64748B', fontSize:'11px', fontWeight:'500', fontFamily:"'DM Sans',sans-serif" },
+  sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+  divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none' },
+  navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
 
 
   // MAIN

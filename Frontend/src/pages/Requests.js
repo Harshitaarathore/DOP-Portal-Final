@@ -91,36 +91,44 @@ function Requests() {
 
   return (
     <div style={styles.page}>
+
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarLogo}>
           <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>DOP Portal</div>
+          {/* <div style={styles.logoTitle}>DOP Portal</div> */}
           <div style={styles.logoSub}>Director's Office</div>
         </div>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E2E8F0' }}>
+          <div style={{ color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px' }}>Director's Office Portal</div>
+          <div style={{ color:'#64748B', fontSize:'11px', fontWeight:'500' }}>{new Date().toLocaleDateString('en-US', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
+        </div>
         {[
-          { label: 'Dashboard', path: '/dashboard' },
-          { label: 'Calendar', path: '/calendar' },
-          { label: 'Requests', path: '/requests' },
-          { label: 'Documents', path: '/documents' },
-          { label: 'Visitors', path: '/visitors' },
-          { label: 'Tasks', path: '/tasks' },
-          { label: 'Reports', path: '/reports' },
-          { label: 'Settings', path: '/settings' },
+          { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+          { label:'Calendar',      path:'/calendar',       icon:'📅' },
+          { label:'Requests',      path:'/requests',       icon:'📋' },
+          { label:'Documents',     path:'/documents',      icon:'📁' },
+          { label:'Visitors',      path:'/visitors',       icon:'👥' },
+          { label:'Communication', path:'/communications', icon:'💬' },
+          { label:'Tasks',         path:'/tasks',          icon:'✅' },
+          { label:'Announcements', path:'/announcements',  icon:'📢' },
+          { label:'Reports',       path:'/reports',        icon:'📊' },
+          { label:'Settings',      path:'/settings',       icon:'⚙️' },
         ].map((item, i) => (
-          <div key={i}
-            style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
-            onClick={() => navigate(item.path)}
-          >
-            {item.label}
-          </div>
+        <div key={i}
+          style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
+          onClick={() => navigate(item.path)}>
+          <span style={{ fontSize:'14px', marginRight:'8px' }}>{item.icon}</span>{item.label}
+        </div>
         ))}
+        
+
         <div style={styles.sidebarFooter}>
           <div style={styles.avatar}>{initials}</div>
-          <div style={{ flex: 1 }}>
-            <div style={styles.userName}>{name}</div>
-            <div style={styles.userRole}>{role}</div>
-          </div>
+            <div style={{ flex:1 }}>
+              <div style={styles.userName}>{name}</div>
+              <div style={styles.userRole}>{role}</div>
+            </div>
         </div>
       </div>
 
@@ -129,18 +137,19 @@ function Requests() {
 
         {/* TOPBAR — logo + title on left, notif + logout on right */}
         <div style={styles.topbar}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
-            <div>
-              <div style={styles.topbarTitle}>DOP Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>Director's Office Portal</div>
-            </div>
-          </div>
-          <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔</div>
-            <button style={styles.logoutTopBtn} onClick={handleLogout}>Logout</button>
-          </div>
-        </div>
+  <div style={styles.topbarUser}>
+    <div style={styles.topbarAvatar}>{initials}</div>
+    <div>
+      <div style={styles.topbarUserName}>{name}</div>
+      <div style={styles.topbarUserRole}>{role}</div>
+    </div>
+  </div>
+  <div style={styles.topbarRight}>
+    <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔</div>
+    <button style={{...styles.logoutTopBtn, background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B'}} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
+    <button style={styles.logoutTopBtn} onClick={handleLogout}>⏻ Logout</button>
+  </div>
+</div>
 
         <div style={styles.content}>
           <div style={styles.pageHeader}>
@@ -306,67 +315,87 @@ function Requests() {
 }
 
 const styles = {
-  page:          { display: 'flex', height: '100vh', fontFamily: "'DM Sans',sans-serif", background: '#F0F4FA', overflow: 'hidden' },
-  sidebar:       { width: '168px', background: '#122951', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  sidebarLogo:   { padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '10px' },
-  logoTitle:     { color: '#fff', fontSize: '13px', fontWeight: '700' },
-  logoSub:       { color: 'rgba(255,255,255,0.4)', fontSize: '9px' },
-  navItem:       { display: 'flex', alignItems: 'center', padding: '9px 16px', margin: '1px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
-  navActive:     { background: 'rgba(37,99,235,0.35)', color: '#fff' },
-  sidebarFooter: { marginTop: 'auto', padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar:        { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#0EA5E9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff', flexShrink: 0 },
-  userName:      { color: '#fff', fontSize: '11px', fontWeight: '600' },
-  userRole:      { color: 'rgba(255,255,255,0.45)', fontSize: '9px' },
-  logoutBtn:     { color: 'rgba(255,255,255,0.5)', fontSize: '16px', cursor: 'pointer', padding: '4px' },
-  main:          { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  topbar:        { background: '#1A3A6B', padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
-  topbarLogo:    { height: '36px', objectFit: 'contain', filter: 'brightness(0) invert(1)' },
-  topbarTitle:   { color: '#fff', fontSize: '14px', fontWeight: '700' },
-  topbarSub:     { color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginTop: '1px' },
-  topbarRight:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  notifBtn:      { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  content:       { flex: 1, overflowY: 'auto', padding: '18px 22px' },
-  pageHeader:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' },
-  pageTitle:     { fontSize: '16px', fontWeight: '700', color: '#1E293B' },
-  pageSub:       { fontSize: '11px', color: '#64748B', marginTop: '2px' },
-  statRow:       { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' },
-  statCard:      { borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' },
-  statNum:       { fontSize: '22px', fontWeight: '700', lineHeight: 1 },
-  statLabel:     { fontSize: '10px', color: '#64748B', fontWeight: '500' },
-  tabs:          { display: 'flex', gap: '4px', marginBottom: '14px', background: '#fff', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0', width: 'fit-content' },
-  tab:           { padding: '6px 16px', borderRadius: '8px', fontSize: '11px', fontWeight: '600', color: '#64748B', cursor: 'pointer' },
-  tabActive:     { background: '#1A3A6B', color: '#fff' },
-  layout:        { display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px' },
-  listPanel:     { display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' },
-  reqCard:       { background: '#fff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #E2E8F0', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  reqCardActive: { border: '2px solid #2563EB', background: '#EFF6FF' },
-  reqTop:        { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' },
-  reqAvatar:     { width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff', flexShrink: 0 },
-  reqName:       { fontSize: '12px', fontWeight: '700', color: '#1E293B' },
-  reqDept:       { fontSize: '10px', color: '#94A3B8' },
-  reqMid:        { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' },
-  reqType:       { fontSize: '11px', color: '#475569', fontWeight: '500' },
-  reqDate:       { fontSize: '10px', color: '#94A3B8' },
-  badge2:        { fontSize: '9px', fontWeight: '700', padding: '3px 9px', borderRadius: '10px', flexShrink: 0 },
-  detailPanel:   { background: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' },
-  detailHeader:  { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid #F1F5F9' },
-  detailName:    { fontSize: '14px', fontWeight: '700', color: '#1E293B' },
-  detailDept:    { fontSize: '11px', color: '#94A3B8', marginTop: '2px' },
-  detailRow:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F8FAFC' },
-  detailLabel:   { fontSize: '11px', color: '#64748B', fontWeight: '600' },
-  detailValue:   { fontSize: '11px', color: '#1E293B', fontWeight: '500' },
-  detailDesc:    { marginTop: '14px' },
-  descText:      { fontSize: '11px', color: '#475569', lineHeight: 1.7, marginTop: '6px', background: '#F8FAFC', padding: '12px', borderRadius: '8px' },
-  actionNote:    { marginTop: '16px' },
-  noteBox:       { background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px', padding: '10px 13px', fontSize: '10px', color: '#92400E', lineHeight: 1.6, marginBottom: '12px' },
-  approveBtn:    { flex: 1, background: '#166534', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
-  rejectBtn:     { flex: 1, background: '#991B1B', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
-  forwardBtn:    { width: '100%', background: '#1A3A6B', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
-  noSelection:   { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' },
-  emptyMsg:      { padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94A3B8' },
- logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
+  page:          { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  
+  // Sidebar — white, same as Calendar
+  sidebar:       { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+  sidebarLogo:   { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+  lnmiitLogo:    { width:'130px', objectFit:'contain' },
+  logoTitle:     { display:'none' },
+  logoSub:       { display:'none' },
+  navItem:       { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
+  navActive:     { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+  sidebarFooter: { marginTop:'auto', padding:'14px 16px', borderTop:'1px solid #E2E8F0', display:'flex', alignItems:'center', gap:'8px' },
+  avatar:        { width:'32px', height:'32px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  userName:      { color:'#1E293B', fontSize:'11px', fontWeight:'600' },
+  userRole:      { color:'#94A3B8', fontSize:'9px' },
+
+  // Main
+  main:          { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
+
+  // Topbar — white, same as Calendar
+  topbar:        { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+  topbarLogo:    { display:'none' },
+  topbarTitle:   { display:'none' },
+  topbarSub:     { display:'none' },
+  topbarRight:   { display:'flex', alignItems:'center', gap:'8px' },
+  notifBtn:      { background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
+  logoutTopBtn:  { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
+topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
+topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
+topbarUserRole: { color:'#64748B', fontSize:'10px' },
+
+  // Content
+  content:       { flex:1, overflowY:'auto', padding:'16px 20px' },
+  pageHeader:    { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
+  pageTitle:     { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
+  pageSub:       { fontSize:'11px', color:'#64748B', marginTop:'2px' },
+
+  // Stats
+  statRow:       { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'14px' },
+  statCard:      { borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #E2E8F0' },
+  statNum:       { fontSize:'22px', fontWeight:'700', lineHeight:1 },
+  statLabel:     { fontSize:'10px', color:'#64748B', fontWeight:'500' },
+
+  // Tabs
+  tabs:          { display:'flex', gap:'4px', marginBottom:'14px', background:'#F1F5F9', padding:'4px', borderRadius:'8px', border:'1px solid #E2E8F0', width:'fit-content' },
+  tab:           { padding:'7px 18px', borderRadius:'6px', fontSize:'12px', fontWeight:'600', color:'#64748B', cursor:'pointer' },
+  tabActive:     { background:'#1A3A6B', color:'#fff' },
+
+  // Layout
+  layout:        { display:'grid', gridTemplateColumns:'1.2fr 1fr', gap:'14px' },
+  listPanel:     { display:'flex', flexDirection:'column', gap:'8px', overflowY:'auto', maxHeight:'calc(100vh - 280px)' },
+
+  // Request cards
+  reqCard:       { background:'#fff', borderRadius:'10px', padding:'12px 14px', border:'1px solid #E2E8F0', cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' },
+  reqCardActive: { border:'2px solid #2563EB', background:'#EFF6FF' },
+  reqTop:        { display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px' },
+  reqAvatar:     { width:'34px', height:'34px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  reqName:       { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
+  reqDept:       { fontSize:'10px', color:'#94A3B8' },
+  reqMid:        { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' },
+  reqType:       { fontSize:'11px', color:'#475569', fontWeight:'500' },
+  reqDate:       { fontSize:'10px', color:'#94A3B8' },
+  badge2:        { fontSize:'9px', fontWeight:'700', padding:'3px 9px', borderRadius:'10px', flexShrink:0 },
+
+  // Detail panel
+  detailPanel:   { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'18px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflowY:'auto', maxHeight:'calc(100vh - 200px)' },
+  detailHeader:  { display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px', paddingBottom:'14px', borderBottom:'1px solid #F1F5F9' },
+  detailName:    { fontSize:'14px', fontWeight:'700', color:'#1E293B' },
+  detailDept:    { fontSize:'11px', color:'#94A3B8', marginTop:'2px' },
+  detailRow:     { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F8FAFC' },
+  detailLabel:   { fontSize:'11px', color:'#64748B', fontWeight:'600' },
+  detailValue:   { fontSize:'11px', color:'#1E293B', fontWeight:'500' },
+  detailDesc:    { marginTop:'14px' },
+  descText:      { fontSize:'11px', color:'#475569', lineHeight:1.7, marginTop:'6px', background:'#F8FAFC', padding:'12px', borderRadius:'8px' },
+  actionNote:    { marginTop:'16px' },
+  noteBox:       { background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:'8px', padding:'10px 13px', fontSize:'10px', color:'#92400E', lineHeight:1.6, marginBottom:'12px' },
+  approveBtn:    { flex:1, background:'#166534', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  rejectBtn:     { flex:1, background:'#991B1B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  forwardBtn:    { width:'100%', background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'8px', padding:'11px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
+  noSelection:   { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', color:'#94A3B8' },
+  emptyMsg:      { padding:'20px', textAlign:'center', fontSize:'12px', color:'#94A3B8' },
 };
 
 export default Requests;

@@ -160,7 +160,8 @@ const upcomingTasks = tasks
   ];
 
   return (
-    <div style={S.page}>
+  
+    <div style={S.page} className="page-transition">
 
       {/* SIDEBAR */}
       <div style={S.sidebar}>
@@ -354,8 +355,8 @@ const upcomingTasks = tasks
           <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
           {canManage && (
             <div style={{ display:'flex', gap:'4px' }}>
-              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️ Edit</button>
-              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑 Delete</button>
+              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️</button>
+              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
             </div>
           )}
         </div>
@@ -364,12 +365,12 @@ const upcomingTasks = tasks
   </>
 )}
 
-                {selectedDayTasks.length > 0 && (
+{selectedDayTasks.length > 0 && (
   <>
     <div style={{ ...S.sectionLabel, background:'#EDE9FE', color:'#5B21B6' }}>📌 Task Deadlines</div>
     {selectedDayTasks.map((t, i) => (
       <div key={i} style={S.upcomingItem}>
-        <div style={{ fontSize:'10px', color:'#8B5CF6', fontWeight:'600', width:'48px', flexShrink:0 }}>DEADLINE</div>
+        <div style={{ fontSize:'11px', color:'#8B5CF6', fontWeight:'600', width:'48px', flexShrink:0 }}>DL</div>
         <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{t.title}</div>
         <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
       </div>
@@ -411,40 +412,88 @@ const upcomingTasks = tasks
 
           {/* WEEK VIEW */}
           {viewMode === 'week' && (
-            <div style={S.calCard}>
-              <div style={S.monthNav}>
-  <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset - 1)}>←</button>
-  <span style={S.monthName}>
-    {weekDays[0].toLocaleDateString('en-US', { month:'short', day:'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
-  </span>
-  <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset + 1)}>→</button>
-</div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'6px', marginTop:'10px' }}>
-                {weekDays.map((wd, i) => {
-                  const d = wd.getDate(), m = wd.getMonth();
-                  const isToday = wd.toDateString() === new Date().toDateString();
-                  const dayEvs = events.filter(ev => { const ed = new Date(ev.start_time); return ed.getDate()===d && ed.getMonth()===m; });
-                  const dayTsk = tasks.filter(t => { if(!t.deadline) return false; const td = new Date(t.deadline); return td.getDate()===d && td.getMonth()===m; });
-                  return (
-                    <div key={i} style={{ background: isToday?'#EFF6FF':'#fff', border: isToday?'2px solid #2563EB':'1px solid #E2E8F0', borderRadius:'10px', padding:'8px', minHeight:'120px' }}>
-                      <div style={{ fontSize:'10px', fontWeight:'700', color: isToday?'#2563EB':'#1E293B', marginBottom:'6px', textAlign:'center' }}>
-                        {wd.toLocaleDateString('en-US', { weekday:'short' })}<br/>
-                        <span style={{ fontSize:'15px' }}>{d}</span>
-                      </div>
-                      {dayEvs.map((ev,j) => {
-                        const s = getEventStyle(ev.type);
-                        const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
-                        return <div key={j} style={{ background:s.tagBg, color:s.tagColor, borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{t} {canManage ? ev.title : 'Busy'}</div>;
-                      })}
-                      {dayTsk.map((t,j) => (
-                        <div key={j} style={{ background:'#EDE9FE', color:'#5B21B6', borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>📌 {t.title}</div>
-                      ))}
-                    </div>
-                  );
-                })}
+  <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+    <div style={S.calCard}>
+      <div style={S.monthNav}>
+        <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset - 1)}>←</button>
+        <span style={S.monthName}>
+          {weekDays[0].toLocaleDateString('en-US', { month:'short', day:'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+        </span>
+        <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset + 1)}>→</button>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'6px' }}>
+        {weekDays.map((wd, i) => {
+          const d = wd.getDate(), m = wd.getMonth();
+          const isToday = wd.toDateString() === new Date().toDateString();
+          const isSelected = d === selectedDay && m === currentMonth.getMonth();
+          const dayEvs = events.filter(ev => { const ed = new Date(ev.start_time); return ed.getDate()===d && ed.getMonth()===m; });
+          const dayTsk = tasks.filter(t => { if(!t.deadline) return false; const td = new Date(t.deadline); return td.getDate()===d && td.getMonth()===m; });
+          return (
+            <div key={i}
+              style={{
+                background: isToday ? '#EFF6FF' : isSelected ? '#F8FAFC' : '#fff',
+                border: isToday ? '2px solid #2563EB' : isSelected ? '2px solid #1A3A6B' : '1px solid #E2E8F0',
+                borderRadius:'10px', padding:'8px', minHeight:'120px', cursor:'pointer',
+                transition:'all 0.15s ease'
+              }}
+              onClick={() => { setSelectedDay(d); setCurrentMonth(new Date(wd.getFullYear(), m, 1)); }}
+            >
+              <div style={{ fontSize:'10px', fontWeight:'700', color: isToday?'#2563EB': isSelected?'#1A3A6B':'#1E293B', marginBottom:'6px', textAlign:'center' }}>
+                {wd.toLocaleDateString('en-US', { weekday:'short' })}<br/>
+                <span style={{ fontSize:'15px' }}>{d}</span>
               </div>
+              {dayEvs.map((ev,j) => {
+                const s = getEventStyle(ev.type);
+                const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+                return <div key={j} style={{ background:s.tagBg, color:s.tagColor, borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{t} {canManage ? ev.title : 'Busy'}</div>;
+              })}
+              {dayTsk.map((t,j) => (
+                <div key={j} style={{ background:'#EDE9FE', color:'#5B21B6', borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>📌 {t.title}</div>
+              ))}
             </div>
-          )}
+          );
+        })}
+      </div>
+    </div>
+
+    {/* WEEK DETAIL PANEL — same as month right panel */}
+    <div style={{ ...S.calCard, padding:'14px' }}>
+      <div style={S.panelTitle}>
+        {currentMonth.toLocaleString('default', { month:'long' })} {selectedDay}, {currentMonth.getFullYear()}
+      </div>
+      {(eventsByDay[selectedDay] || []).length === 0 && (tasksByDay[selectedDay] || []).length === 0 ? (
+        <div style={S.empty}>No events or tasks for this day</div>
+      ) : (
+        <>
+          {(eventsByDay[selectedDay] || []).map((ev, i) => {
+            const s = getEventStyle(ev.type);
+            const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+            return (
+              <div key={i} style={S.upcomingItem}>
+                <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>{time}</div>
+                <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? ev.title : 'Busy'}</div>
+                <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
+                {canManage && (
+                  <div style={{ display:'flex', gap:'4px' }}>
+                    <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️</button>
+                    <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {(tasksByDay[selectedDay] || []).map((t, i) => (
+            <div key={i} style={S.upcomingItem}>
+              <div style={{ fontSize:'10px', color:'#8B5CF6', fontWeight:'600', width:'48px', flexShrink:0 }}>DL</div>
+              <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{t.title}</div>
+              <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  </div>
+)}
 
           {/* LIST VIEW */}
           {viewMode === 'list' && (
@@ -481,19 +530,20 @@ const upcomingTasks = tasks
         </div>
       </div>
     </div>
+    
   );
 }
 
 const S = {
   page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  logoWrap:    { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+  logo:        { width:'130px', objectFit:'contain' },
+  portalBanner: { padding:'14px 16px'},
+  portalName:   { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px', fontFamily:"'DM Sans',sans-serif" },
+  portalDate:   { color:'#64748B', fontSize:'11px', fontWeight:'500', fontFamily:"'DM Sans',sans-serif" },
   sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
-  logoWrap:       { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
-  logo:           { width:'130px', objectFit:'contain' },
-  portalBanner:   { padding:'14px 16px', borderBottom:'1px solid #E2E8F0' },
-  portalName:     { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'4px' },
-  portalDate:     { color:'#64748B', fontSize:'10px', fontWeight:'500' },
   divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
-  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
+  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none' },
   navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
   navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
   main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
