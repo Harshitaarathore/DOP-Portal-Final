@@ -11,35 +11,27 @@ function Calendar() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [viewMode, setViewMode] = useState('month'); // 'month' | 'week' | 'list'
+  const [viewMode, setViewMode] = useState('month');
   const [newEvent, setNewEvent] = useState({ title: '', description: '', start_time: '', end_time: '', type: 'Public', visibility: 'public', notes: '' });
+  const [addError, setAddError] = useState('');
+  const [hoveredNav, setHoveredNav] = useState(null);
+
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
+  const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const canManage = role === 'Secretary' || role === 'Director';
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  useEffect(() => {
-    fetchEvents();
-    fetchTasks();
-  }, []);
+  useEffect(() => { fetchEvents(); fetchTasks(); }, []);
 
   const fetchEvents = async () => {
     try {
-      let res;
-      if (role === 'Staff') {
-        res = await API.get('/events/public');
-      } else {
-        res = await API.get('/events/full');
-      }
+      const res = await API.get(role === 'Staff' ? '/events/public' : '/events/full');
       if (res.data.success) setEvents(res.data.data);
-    } catch (err) {
-      console.log('Error fetching events:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.log(err); } 
+    finally { setLoading(false); }
   };
 
   const fetchTasks = async () => {
@@ -53,25 +45,23 @@ function Calendar() {
         ];
         setTasks(all);
       }
-    } catch (err) {
-      console.log('Error fetching tasks:', err);
-    }
+    } catch (err) { console.log(err); }
   };
 
   const handleAddEvent = async () => {
+    setAddError('');
+    if (!newEvent.title.trim()) { setAddError('Event title is required'); return; }
+    if (!newEvent.start_time) { setAddError('Start time is required'); return; }
+    if (!newEvent.end_time) { setAddError('End time is required'); return; }
+    if (newEvent.start_time >= newEvent.end_time) { setAddError('End time must be after start time'); return; }
     try {
       const res = await API.post('/events', newEvent);
       if (res.data.success) {
-        alert('Event created!');
         setShowAddForm(false);
         setNewEvent({ title: '', description: '', start_time: '', end_time: '', type: 'Public', visibility: 'public', notes: '' });
         fetchEvents();
-      } else {
-        alert(res.data.message);
-      }
-    } catch (err) {
-      alert('Failed to create event');
-    }
+      } else { setAddError(res.data.message); }
+    } catch { setAddError('Failed to create event'); }
   };
 
   const handleDeleteEvent = async (id) => {
@@ -79,240 +69,235 @@ function Calendar() {
     try {
       const res = await API.delete(`/events/${id}`);
       if (res.data.success) fetchEvents();
-    } catch (err) {
-      alert('Failed to delete event');
-    }
+    } catch { alert('Failed to delete'); }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-  };
+  const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
-  // ── Calendar helpers ──────────────────────────────────────
-  const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  // Color coding per SRS + extras
+  const getEventStyle = (type) => {
+    if (type === 'Confidential') return { dot: '#EF4444', tagBg: '#FEE2E2', tagColor: '#991B1B', bar: '#EF4444' };
+    if (type === 'Internal')     return { dot: '#F59E0B', tagBg: '#FEF3C7', tagColor: '#92400E', bar: '#F59E0B' };
+    return                              { dot: '#22C55E', tagBg: '#DCFCE7', tagColor: '#166534', bar: '#22C55E' };
+  };
+  const taskStyle  = { dot: '#8B5CF6', tagBg: '#EDE9FE', tagColor: '#5B21B6', bar: '#8B5CF6' };
+  const visitorStyle = { dot: '#F97316', tagBg: '#FFEDD5', tagColor: '#9A3412', bar: '#F97316' };
+
+  // Calendar helpers
+  const monthName  = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const firstDay   = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-
-  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  const prevMonth  = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const nextMonth  = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
   const days = [];
   for (let i = 0; i < firstDay; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
-  // group events by day
   const eventsByDay = {};
   events.forEach(ev => {
     const d = new Date(ev.start_time).getDate();
     const m = new Date(ev.start_time).getMonth();
     if (m === currentMonth.getMonth()) {
       if (!eventsByDay[d]) eventsByDay[d] = [];
-      eventsByDay[d].push({ ...ev, itemType: 'event' });
+      eventsByDay[d].push(ev);
     }
   });
 
-  // group tasks by deadline day
   const tasksByDay = {};
-  tasks.forEach(task => {
-    if (!task.deadline) return;
-    const d = new Date(task.deadline).getDate();
-    const m = new Date(task.deadline).getMonth();
+  tasks.forEach(t => {
+    if (!t.deadline) return;
+    const d = new Date(t.deadline).getDate();
+    const m = new Date(t.deadline).getMonth();
     if (m === currentMonth.getMonth()) {
       if (!tasksByDay[d]) tasksByDay[d] = [];
-      tasksByDay[d].push({ ...task, itemType: 'task' });
+      tasksByDay[d].push(t);
     }
   });
 
-  const getTypeStyle = (type) => {
-    if (type === 'Confidential') return { tagBg: '#FEE2E2', tagColor: '#991B1B', dot: '#EF4444' };
-    if (type === 'Internal') return { tagBg: '#FEF3C7', tagColor: '#92400E', dot: '#F59E0B' };
-    return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
-  };
-
   const selectedDayEvents = eventsByDay[selectedDay] || [];
-  const selectedDayTasks = tasksByDay[selectedDay] || [];
-
+  const selectedDayTasks  = tasksByDay[selectedDay]  || [];
   const nowDate = new Date();
-  const upcoming = events
-    .filter(ev => new Date(ev.start_time) > nowDate)
-    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
-    .slice(0, 5);
+  const upcoming = events.filter(ev => new Date(ev.start_time) > nowDate).sort((a,b) => new Date(a.start_time)-new Date(b.start_time)).slice(0,5);
+  const upcomingTasks = tasks.filter(t => t.deadline && new Date(t.deadline) > nowDate && t.status !== 'Completed').sort((a,b) => new Date(a.deadline)-new Date(b.deadline)).slice(0,5);
 
-  const upcomingTasks = tasks
-    .filter(t => t.deadline && new Date(t.deadline) > nowDate && t.status !== 'Completed')
-    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
-    .slice(0, 5);
-
-  // ── Week view helpers ─────────────────────────────────────
   const getWeekDays = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const start = new Date(today);
-    start.setDate(today.getDate() - day);
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      week.push(d);
-    }
-    return week;
+    const tod = new Date();
+    const start = new Date(tod);
+    start.setDate(tod.getDate() - tod.getDay());
+    return Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
   };
   const weekDays = getWeekDays();
 
-  // ── List view: all events + tasks sorted by date ──────────
   const allItems = [
-    ...events.map(e => ({ ...e, itemType: 'event', sortDate: new Date(e.start_time) })),
-    ...tasks.filter(t => t.deadline).map(t => ({ ...t, itemType: 'task', sortDate: new Date(t.deadline) })),
-  ].sort((a, b) => a.sortDate - b.sortDate);
+    ...events.map(e => ({ ...e, itemType:'event', sortDate: new Date(e.start_time) })),
+    ...tasks.filter(t=>t.deadline).map(t => ({ ...t, itemType:'task', sortDate: new Date(t.deadline) })),
+  ].sort((a,b) => a.sortDate - b.sortDate);
+
+  const navItems = [
+    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Calendar',      path:'/calendar',       icon:'📅' },
+    { label:'Requests',      path:'/requests',       icon:'📋' },
+    { label:'Documents',     path:'/documents',      icon:'📁' },
+    { label:'Visitors',      path:'/visitors',       icon:'👥' },
+    { label:'Communication', path:'/communications', icon:'💬' },
+    { label:'Tasks',         path:'/tasks',          icon:'✅' },
+    { label:'Announcements', path:'/announcements',  icon:'📢' },
+    { label:'Reports',       path:'/reports',        icon:'📊' },
+    { label:'Settings',      path:'/settings',       icon:'⚙️' },
+  ];
 
   return (
-    <div style={styles.page}>
+    <div style={S.page}>
+
       {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
-          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>Director's Office Portal</div>
-          <div style={styles.logoSub}>Director's Office</div>
+      <div style={S.sidebar}>
+        <div style={S.logoWrap}>
+          <img src={lnmiitLogo} alt="LNMIIT" style={S.logo} />
         </div>
-        {[
-          { label: 'Dashboard', path: '/dashboard' },
-          { label: 'Calendar', path: '/calendar' },
-          { label: 'Requests', path: '/requests' },
-          { label: 'Documents', path: '/documents' },
-          { label: 'Visitors', path: '/visitors' },
-          { label: 'Communication', path: '/communications' },
-          { label: 'Tasks', path: '/tasks' },
-          { label: 'Reports', path: '/reports' },
-          { label: 'Settings', path: '/settings' },
-        ].map((item, i) => (
+        <div style={S.portalBanner}>
+          <div style={S.portalName}>Director's Office Portal</div>
+          <div style={S.portalDate}>{today}</div>
+        </div>
+        <div style={S.divider} />
+        {navItems.map((item, i) => (
           <div key={i}
-            style={{ ...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {}) }}
+            style={{ ...S.navItem, ...(item.path === window.location.pathname ? S.navActive : {}), ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {}) }}
+            onMouseEnter={() => setHoveredNav(i)}
+            onMouseLeave={() => setHoveredNav(null)}
             onClick={() => navigate(item.path)}
           >
-            {item.label}
+            <span style={S.navIcon}>{item.icon}</span>{item.label}
           </div>
         ))}
-        <div style={styles.sidebarFooter}>
-          <div style={styles.avatar}>{initials}</div>
-          <div style={{ flex: 1 }}>
-            <div style={styles.userName}>{name}</div>
-            <div style={styles.userRole}>{role}</div>
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px', cursor: 'pointer' }} onClick={handleLogout}>↩</div>
-        </div>
       </div>
 
       {/* MAIN */}
-      <div style={styles.main}>
-        <div style={styles.topbar}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
+      <div style={S.main}>
+
+        {/* TOPBAR */}
+        <div style={S.topbar}>
+          <div style={S.topbarUser}>
+            <div style={S.topbarAvatar}>{initials}</div>
             <div>
-              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>{today}</div>
+              <div style={S.topbarUserName}>{name}</div>
+              <div style={S.topbarUserEmail}>{email}</div>
+              <div style={S.topbarUserRole}>{role}</div>
             </div>
           </div>
-          <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>🔔</div>
-            <button style={styles.logoutTopBtn} onClick={handleLogout}>Logout</button>
+          <div style={S.topbarRight}>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔</div>
+            <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
+            <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
         </div>
 
-        <div style={styles.content}>
+        {/* CONTENT */}
+        <div style={S.content}>
+
           {/* PAGE HEADER */}
-          <div style={styles.pageHeader}>
+          <div style={S.pageHeader}>
             <div>
-              <div style={styles.pageTitle}>📅 Calendar</div>
-              <div style={styles.pageSub}>Manage meetings, events and task deadlines</div>
+              <div style={S.pageTitle}>📅 Calendar</div>
+              <div style={S.pageSub}>Manage meetings, events and task deadlines</div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {/* VIEW TOGGLE */}
-              <div style={styles.viewToggle}>
-                {['month', 'week', 'list'].map(v => (
+            <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+              <div style={S.viewToggle}>
+                {['month','week','list'].map(v => (
                   <div key={v}
-                    style={{ ...styles.viewBtn2, ...(viewMode === v ? styles.viewBtnActive : {}) }}
+                    style={{ ...S.viewBtn, ...(viewMode === v ? S.viewBtnActive : {}) }}
                     onClick={() => setViewMode(v)}
                   >
-                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                    {v.charAt(0).toUpperCase()+v.slice(1)}
                   </div>
                 ))}
               </div>
-              {(role === 'Secretary' || role === 'Director') && (
-                <button style={styles.addBtn} onClick={() => setShowAddForm(!showAddForm)}>+ Add Event</button>
+              {canManage && (
+                <button style={S.addBtn} onClick={() => setShowAddForm(!showAddForm)}>+ Add Event</button>
               )}
             </div>
           </div>
 
           {/* ADD EVENT FORM */}
           {showAddForm && (
-            <div style={styles.addForm}>
-              <input style={styles.input} placeholder="Event title" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
-              <input style={styles.input} placeholder="Description" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} />
-              <input style={styles.input} type="datetime-local" value={newEvent.start_time} onChange={e => setNewEvent({ ...newEvent, start_time: e.target.value })} />
-              <input style={styles.input} type="datetime-local" value={newEvent.end_time} onChange={e => setNewEvent({ ...newEvent, end_time: e.target.value })} />
-              <select style={styles.input} value={newEvent.type} onChange={e => setNewEvent({ ...newEvent, type: e.target.value })}>
-                <option>Public</option>
-                <option>Internal</option>
-                <option>Confidential</option>
-              </select>
-              {role !== 'Staff' && (
-                <input style={styles.input} placeholder="Notes (secret)" value={newEvent.notes} onChange={e => setNewEvent({ ...newEvent, notes: e.target.value })} />
-              )}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button style={styles.addBtn} onClick={handleAddEvent}>Save Event</button>
-                <button style={{ ...styles.addBtn, background: '#64748B' }} onClick={() => setShowAddForm(false)}>Cancel</button>
+            <div style={S.addForm}>
+              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <input style={{ ...S.input, flex:2 }} placeholder="Event title *" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title:e.target.value})} />
+                <input style={{ ...S.input, flex:2 }} placeholder="Description" value={newEvent.description} onChange={e => setNewEvent({...newEvent, description:e.target.value})} />
+                <select style={{ ...S.input, flex:1 }} value={newEvent.type} onChange={e => setNewEvent({...newEvent, type:e.target.value})}>
+                  <option>Public</option><option>Internal</option><option>Confidential</option>
+                </select>
+              </div>
+              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <input style={{ ...S.input, flex:1 }} type="datetime-local" value={newEvent.start_time} onChange={e => setNewEvent({...newEvent, start_time:e.target.value})} />
+                <input style={{ ...S.input, flex:1 }} type="datetime-local" value={newEvent.end_time} onChange={e => setNewEvent({...newEvent, end_time:e.target.value})} />
+                {canManage && <input style={{ ...S.input, flex:2 }} placeholder="Notes (private)" value={newEvent.notes} onChange={e => setNewEvent({...newEvent, notes:e.target.value})} />}
+              </div>
+              {addError && <div style={S.errorMsg}>⚠️ {addError}</div>}
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button style={S.addBtn} onClick={handleAddEvent}>Save Event</button>
+                <button style={{ ...S.addBtn, background:'#64748B' }} onClick={() => { setShowAddForm(false); setAddError(''); }}>Cancel</button>
               </div>
             </div>
           )}
 
-          {/* ── MONTH VIEW ── */}
+          {/* MONTH VIEW */}
           {viewMode === 'month' && (
-            <div style={styles.calendarLayout}>
-              {/* LEFT - CALENDAR GRID */}
-              <div style={styles.calCard}>
-                <div style={styles.monthNav}>
-                  <button style={styles.navBtn} onClick={prevMonth}>←</button>
-                  <span style={styles.monthName}>{monthName}</span>
-                  <button style={styles.navBtn} onClick={nextMonth}>→</button>
+            <div style={S.calLayout}>
+
+              {/* CALENDAR GRID */}
+              <div style={S.calCard}>
+                <div style={S.monthNav}>
+                  <button style={S.navBtn} onClick={prevMonth}>←</button>
+                  <span style={S.monthName}>{monthName}</span>
+                  <button style={S.navBtn} onClick={nextMonth}>→</button>
                 </div>
 
-                <div style={styles.dayHeaders}>
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <div key={d} style={styles.dayHeader}>{d}</div>
+                <div style={S.dayHeaders}>
+                  {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                    <div key={d} style={S.dayHeader}>{d}</div>
                   ))}
                 </div>
 
-                <div style={styles.daysGrid}>
+                <div style={S.daysGrid}>
                   {days.map((day, i) => {
-                    const dayEvents = eventsByDay[day] || [];
-                    const dayTasks = tasksByDay[day] || [];
-                    const hasEvent = dayEvents.length > 0;
-                    const hasTask = dayTasks.length > 0;
+                    const dayEvs  = eventsByDay[day] || [];
+                    const dayTsks = tasksByDay[day]  || [];
                     const isSelected = day === selectedDay;
-                    const isToday = day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth();
+                    const isToday = day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear();
                     return (
                       <div key={i}
                         style={{
-                          ...styles.dayCell,
-                          ...(isSelected ? { border: '2px solid #1A3A6B', background: '#EFF6FF' } : {}),
-                          ...(isToday && !isSelected ? { border: '2px solid #2563EB', background: '#F0F9FF' } : {}),
-                          ...(day === null ? styles.dayCellEmpty : {}),
+                          ...S.dayCell,
+                          ...(day === null ? S.dayCellEmpty : {}),
+                          ...(isToday    ? { background:'#EFF6FF', border:'2px solid #2563EB' } : {}),
+                          ...(isSelected && !isToday ? { background:'#F8FAFC', border:'2px solid #1A3A6B' } : {}),
                         }}
                         onClick={() => day && setSelectedDay(day)}
                       >
                         {day && (
                           <>
-                            <span style={{ fontSize: '12px', fontWeight: isToday ? '800' : '600', color: isToday ? '#2563EB' : '#1E293B' }}>{day}</span>
-                            <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                              {hasEvent && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#2563EB' }}></div>}
-                              {hasTask && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#F59E0B' }}></div>}
+                            <span style={{ fontSize:'11px', fontWeight: isToday ? '800':'600', color: isToday ? '#2563EB':'#1E293B' }}>{day}</span>
+                            {/* Event/task dots + labels */}
+                            <div style={{ width:'100%', padding:'0 2px', marginTop:'2px' }}>
+                              {dayEvs.slice(0,2).map((ev, j) => {
+                                const s = getEventStyle(ev.type);
+                                const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+                                return (
+                                  <div key={j} style={{ background: s.tagBg, color: s.tagColor, fontSize:'7px', fontWeight:'600', borderRadius:'3px', padding:'1px 3px', marginBottom:'1px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                                    {canManage ? `${t} ${ev.title}` : `${t} Busy`}
+                                  </div>
+                                );
+                              })}
+                              {dayTsks.slice(0,1).map((t, j) => (
+                                <div key={j} style={{ background:'#EDE9FE', color:'#5B21B6', fontSize:'7px', fontWeight:'600', borderRadius:'3px', padding:'1px 3px', marginBottom:'1px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+                                  📌 {t.title}
+                                </div>
+                              ))}
+                              {(dayEvs.length + dayTsks.length) > 3 && (
+                                <div style={{ fontSize:'7px', color:'#94A3B8', textAlign:'center' }}>+{dayEvs.length + dayTsks.length - 3} more</div>
+                              )}
                             </div>
-                            {(hasEvent || hasTask) && (
-                              <div style={{ fontSize: '7px', color: '#64748B', marginTop: '1px' }}>
-                                {hasEvent ? `${dayEvents.length}E` : ''}{hasEvent && hasTask ? ' ' : ''}{hasTask ? `${dayTasks.length}T` : ''}
-                              </div>
-                            )}
                           </>
                         )}
                       </div>
@@ -320,161 +305,131 @@ function Calendar() {
                   })}
                 </div>
 
-                {/* LEGEND */}
-                <div style={styles.legend}>
-                  {[
-                    { label: 'Confidential', color: '#991B1B', bg: '#FEE2E2' },
-                    { label: 'Internal', color: '#92400E', bg: '#FEF3C7' },
-                    { label: 'Public', color: '#1E40AF', bg: '#DBEAFE' },
-                    { label: 'Task Deadline', color: '#92400E', bg: '#FEF3C7' },
-                  ].map((l, i) => (
-                    <div key={i} style={styles.legendItem}>
-                      <div style={{ ...styles.legendDot, background: i === 3 ? '#F59E0B' : l.color }}></div>
-                      <span style={{ ...styles.legendLabel, background: l.bg, color: l.color }}>{l.label}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* LEGEND — only for Secretary/Director */}
+                {canManage && (
+                  <div style={S.legend}>
+                    {[
+                      { label:'Confidential', bg:'#FEE2E2', color:'#991B1B' },
+                      { label:'Internal',     bg:'#FEF3C7', color:'#92400E' },
+                      { label:'Public',       bg:'#DCFCE7', color:'166534' },
+                      { label:'Task',         bg:'#EDE9FE', color:'#5B21B6' },
+                    ].map((l,i) => (
+                      <div key={i} style={S.legendItem}>
+                        <div style={{ width:'8px', height:'8px', borderRadius:'2px', background:l.bg, border:`1px solid ${l.color}`, flexShrink:0 }} />
+                        <span style={{ fontSize:'9px', color:'#64748B' }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* RIGHT - SELECTED DAY DETAILS */}
-              <div style={styles.eventsPanel}>
-                <div style={styles.eventsPanelTitle}>
-                  📋 {currentMonth.toLocaleString('default', { month: 'long' })} {selectedDay}
+              {/* RIGHT PANEL */}
+              <div style={S.eventsPanel}>
+                <div style={S.panelTitle}>
+                  {currentMonth.toLocaleString('default', { month:'long' })} {selectedDay}, {currentMonth.getFullYear()}
                 </div>
 
-                {/* Events for selected day */}
                 {selectedDayEvents.length > 0 && (
                   <>
-                    <div style={styles.sectionLabel}>🗓 Events</div>
+                    <div style={S.sectionLabel}>🗓 Events</div>
                     {selectedDayEvents.map((ev, i) => {
-                      const s = getTypeStyle(ev.type);
-                      const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                      const s = getEventStyle(ev.type);
+                      const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
                       return (
-                        <div key={i} style={styles.eventCard}>
-                          <div style={styles.eventCardLeft}>
-                            <div style={styles.eventTime}>{time}</div>
-                            <div style={styles.eventBar}></div>
+                        <div key={i} style={{ ...S.eventCard, borderLeft:`3px solid ${s.bar}` }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'4px' }}>
+                            <div style={{ fontSize:'10px', fontWeight:'700', color:'#1A3A6B', fontFamily:'monospace' }}>{time}</div>
+                            <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
                           </div>
-                          <div style={styles.eventCardRight}>
-                            <div style={styles.eventTitle}>{role === 'Staff' ? 'Busy' : ev.title}</div>
-                            <span style={{ ...styles.eventTag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>
-                            {role !== 'Staff' && ev.notes && <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>📝 {ev.notes}</div>}
-                            {role !== 'Staff' && ev.description && <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>📄 {ev.description}</div>}
-                            {(role === 'Secretary' || role === 'Director') && (
-                              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                                <button style={styles.editEvBtn} onClick={() => {
-                                  const newTitle = prompt('Edit title:', ev.title);
-                                  if (newTitle) API.put(`/events/${ev.id}`, { ...ev, title: newTitle }).then(() => fetchEvents()).catch(() => alert('Failed to edit'));
-                                }}>✏️ Edit</button>
-                                <button style={styles.deleteEvBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑 Delete</button>
-                              </div>
-                            )}
-                          </div>
+                          <div style={{ fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>{canManage ? ev.title : 'Busy'}</div>
+                          {canManage && ev.description && <div style={{ fontSize:'10px', color:'#64748B', marginTop:'3px' }}>📄 {ev.description}</div>}
+                          {canManage && ev.notes && <div style={{ fontSize:'10px', color:'#94A3B8', marginTop:'2px' }}>📝 {ev.notes}</div>}
+                          {canManage && (
+                            <div style={{ display:'flex', gap:'6px', marginTop:'6px' }}>
+                              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️ Edit</button>
+                              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑 Delete</button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </>
                 )}
 
-                {/* Tasks for selected day */}
                 {selectedDayTasks.length > 0 && (
                   <>
-                    <div style={{ ...styles.sectionLabel, color: '#92400E', background: '#FEF3C7' }}>📌 Task Deadlines</div>
-                    {selectedDayTasks.map((task, i) => (
-                      <div key={i} style={{ ...styles.eventCard, border: '1px solid #FDE68A', background: '#FFFBEB' }}>
-                        <div style={styles.eventCardLeft}>
-                          <div style={{ ...styles.eventTime, color: '#92400E' }}>DL</div>
-                          <div style={{ ...styles.eventBar, background: '#FCD34D' }}></div>
+                    <div style={{ ...S.sectionLabel, background:'#EDE9FE', color:'#5B21B6' }}>📌 Task Deadlines</div>
+                    {selectedDayTasks.map((t, i) => (
+                      <div key={i} style={{ ...S.eventCard, borderLeft:'3px solid #8B5CF6' }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'4px' }}>
+                          <div style={{ fontSize:'10px', fontWeight:'700', color:'#5B21B6' }}>DEADLINE</div>
+                          <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
                         </div>
-                        <div style={styles.eventCardRight}>
-                          <div style={styles.eventTitle}>{task.title}</div>
-                          <span style={{ ...styles.eventTag, background: '#FEF3C7', color: '#92400E' }}>
-                            {task.status || 'Pending'}
-                          </span>
-                          {task.assigned_to && <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>👤 {task.assigned_to}</div>}
-                        </div>
+                        <div style={{ fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>{t.title}</div>
                       </div>
                     ))}
                   </>
                 )}
 
                 {selectedDayEvents.length === 0 && selectedDayTasks.length === 0 && (
-                  <div style={styles.noEvents}>No events or tasks for this day</div>
+                  <div style={S.empty}>No events or tasks for this day</div>
                 )}
 
-                {/* UPCOMING EVENTS */}
-                <div style={styles.upcomingTitle}>🔔 Upcoming Events</div>
-                {upcoming.length === 0 ? (
-                  <div style={styles.noEvents}>No upcoming events</div>
-                ) : upcoming.map((u, i) => {
-                  const s = getTypeStyle(u.type);
+                <div style={S.upcomingTitle}>🔔 Upcoming Events</div>
+                {upcoming.length === 0 ? <div style={S.empty}>No upcoming events</div> : upcoming.map((u,i) => {
+                  const s = getEventStyle(u.type);
                   return (
-                    <div key={i} style={styles.upcomingItem}>
-                      <div style={styles.upcomingDay}>{new Date(u.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</div>
-                      <div style={styles.upcomingName}>{u.title}</div>
-                      <span style={{ ...styles.eventTag, background: s.tagBg, color: s.tagColor }}>{u.type}</span>
+                    <div key={i} style={S.upcomingItem}>
+                      <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>
+                        {new Date(u.start_time).toLocaleDateString('en-US', { day:'numeric', month:'short' })}
+                      </div>
+                      <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? u.title : 'Busy'}</div>
+                      <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{u.type}</span>
                     </div>
                   );
                 })}
 
-                {/* UPCOMING TASKS */}
-                <div style={{ ...styles.upcomingTitle, color: '#92400E' }}>📌 Upcoming Deadlines</div>
-                {upcomingTasks.length === 0 ? (
-                  <div style={styles.noEvents}>No upcoming deadlines</div>
-                ) : upcomingTasks.map((t, i) => (
-                  <div key={i} style={{ ...styles.upcomingItem, borderBottom: '1px solid #FEF3C7' }}>
-                    <div style={{ ...styles.upcomingDay, color: '#F59E0B' }}>{new Date(t.deadline).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</div>
-                    <div style={styles.upcomingName}>{t.title}</div>
-                    <span style={{ ...styles.eventTag, background: '#FEF3C7', color: '#92400E' }}>{t.status}</span>
+                <div style={{ ...S.upcomingTitle, color:'#5B21B6' }}>📌 Upcoming Deadlines</div>
+                {upcomingTasks.length === 0 ? <div style={S.empty}>No upcoming deadlines</div> : upcomingTasks.map((t,i) => (
+                  <div key={i} style={S.upcomingItem}>
+                    <div style={{ fontSize:'10px', color:'#8B5CF6', fontWeight:'600', width:'48px', flexShrink:0 }}>
+                      {new Date(t.deadline).toLocaleDateString('en-US', { day:'numeric', month:'short' })}
+                    </div>
+                    <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{t.title}</div>
+                    <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── WEEK VIEW ── */}
+          {/* WEEK VIEW */}
           {viewMode === 'week' && (
-            <div style={styles.calCard}>
-              <div style={styles.monthNav}>
-                <button style={styles.navBtn}>←</button>
-                <span style={styles.monthName}>
-                  {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            <div style={S.calCard}>
+              <div style={S.monthNav}>
+                <span style={S.monthName}>
+                  {weekDays[0].toLocaleDateString('en-US', { month:'short', day:'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
                 </span>
-                <button style={styles.navBtn}>→</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '8px', marginTop: '10px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'6px', marginTop:'10px' }}>
                 {weekDays.map((wd, i) => {
-                  const d = wd.getDate();
-                  const m = wd.getMonth();
+                  const d = wd.getDate(), m = wd.getMonth();
                   const isToday = wd.toDateString() === new Date().toDateString();
-                  const dayEvs = events.filter(ev => {
-                    const ed = new Date(ev.start_time);
-                    return ed.getDate() === d && ed.getMonth() === m;
-                  });
-                  const dayTsk = tasks.filter(t => {
-                    if (!t.deadline) return false;
-                    const td = new Date(t.deadline);
-                    return td.getDate() === d && td.getMonth() === m;
-                  });
+                  const dayEvs = events.filter(ev => { const ed = new Date(ev.start_time); return ed.getDate()===d && ed.getMonth()===m; });
+                  const dayTsk = tasks.filter(t => { if(!t.deadline) return false; const td = new Date(t.deadline); return td.getDate()===d && td.getMonth()===m; });
                   return (
-                    <div key={i} style={{ background: isToday ? '#EFF6FF' : '#fff', border: isToday ? '2px solid #2563EB' : '1px solid #E2E8F0', borderRadius: '10px', padding: '10px', minHeight: '120px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: isToday ? '#2563EB' : '#1E293B', marginBottom: '6px', textAlign: 'center' }}>
-                        {wd.toLocaleDateString('en-US', { weekday: 'short' })}<br />
-                        <span style={{ fontSize: '16px' }}>{d}</span>
+                    <div key={i} style={{ background: isToday?'#EFF6FF':'#fff', border: isToday?'2px solid #2563EB':'1px solid #E2E8F0', borderRadius:'10px', padding:'8px', minHeight:'120px' }}>
+                      <div style={{ fontSize:'10px', fontWeight:'700', color: isToday?'#2563EB':'#1E293B', marginBottom:'6px', textAlign:'center' }}>
+                        {wd.toLocaleDateString('en-US', { weekday:'short' })}<br/>
+                        <span style={{ fontSize:'15px' }}>{d}</span>
                       </div>
-                      {dayEvs.map((ev, j) => {
-                        const s = getTypeStyle(ev.type);
-                        const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-                        return (
-                          <div key={j} style={{ background: s.tagBg, color: s.tagColor, borderRadius: '4px', padding: '3px 5px', fontSize: '9px', marginBottom: '3px', fontWeight: '600' }}>
-                            {time} {role === 'Staff' ? 'Busy' : ev.title.slice(0, 15)}
-                          </div>
-                        );
+                      {dayEvs.map((ev,j) => {
+                        const s = getEventStyle(ev.type);
+                        const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+                        return <div key={j} style={{ background:s.tagBg, color:s.tagColor, borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{t} {canManage ? ev.title : 'Busy'}</div>;
                       })}
-                      {dayTsk.map((t, j) => (
-                        <div key={j} style={{ background: '#FEF3C7', color: '#92400E', borderRadius: '4px', padding: '3px 5px', fontSize: '9px', marginBottom: '3px', fontWeight: '600' }}>
-                          📌 {t.title.slice(0, 15)}
-                        </div>
+                      {dayTsk.map((t,j) => (
+                        <div key={j} style={{ background:'#EDE9FE', color:'#5B21B6', borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>📌 {t.title}</div>
                       ))}
                     </div>
                   );
@@ -483,109 +438,100 @@ function Calendar() {
             </div>
           )}
 
-          {/* ── LIST VIEW ── */}
+          {/* LIST VIEW */}
           {viewMode === 'list' && (
-            <div style={styles.calCard}>
-              <div style={styles.monthNav}>
-                <span style={styles.monthName}>All Events & Task Deadlines</span>
+            <div style={S.calCard}>
+              <div style={S.monthNav}>
+                <span style={S.monthName}>All Events & Task Deadlines</span>
               </div>
-              {loading ? (
-                <div style={styles.noEvents}>Loading...</div>
-              ) : allItems.length === 0 ? (
-                <div style={styles.noEvents}>No events or tasks found</div>
-              ) : allItems.map((item, i) => {
+              {loading ? <div style={S.empty}>Loading...</div> : allItems.length === 0 ? <div style={S.empty}>No events or tasks found</div> : allItems.map((item, i) => {
                 const isTask = item.itemType === 'task';
-                const s = isTask ? { tagBg: '#FEF3C7', tagColor: '#92400E' } : getTypeStyle(item.type);
+                const s = isTask ? taskStyle : getEventStyle(item.type);
                 const dateStr = isTask
-                  ? new Date(item.deadline).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-                  : new Date(item.start_time).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-                const timeStr = isTask ? 'Deadline' : new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                  ? new Date(item.deadline).toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' })
+                  : new Date(item.start_time).toLocaleDateString('en-US', { weekday:'short', day:'numeric', month:'short' });
+                const timeStr = isTask ? 'Deadline' : (item.start_time.includes('T') ? item.start_time.split('T')[1].slice(0,5) : item.start_time.split(' ')[1]?.slice(0,5));
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', borderBottom: '1px solid #F1F5F9', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
-                    <div style={{ width: '70px', fontSize: '10px', color: '#64748B', fontWeight: '600', flexShrink: 0 }}>{dateStr}</div>
-                    <div style={{ width: '50px', fontSize: '10px', color: isTask ? '#F59E0B' : '#1A3A6B', fontFamily: 'monospace', fontWeight: '700', flexShrink: 0 }}>{timeStr}</div>
-                    <div style={{ flex: 1, fontSize: '12px', fontWeight: '600', color: '#1E293B' }}>
-                      {isTask ? '📌 ' : '🗓 '}{isTask ? item.title : (role === 'Staff' ? 'Busy' : item.title)}
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 14px', borderBottom:'1px solid #F1F5F9', background: i%2===0?'#fff':'#FAFAFA' }}>
+                    <div style={{ fontSize:'10px', color:'#64748B', fontWeight:'600', width:'80px', flexShrink:0 }}>{dateStr}</div>
+                    <div style={{ fontSize:'10px', color: isTask?'#8B5CF6':'#1A3A6B', fontFamily:'monospace', fontWeight:'700', width:'55px', flexShrink:0 }}>{timeStr}</div>
+                    <div style={{ flex:1, fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>
+                      {isTask ? '📌 ' : '🗓 '}{isTask ? item.title : (canManage ? item.title : 'Busy')}
                     </div>
-                    <span style={{ ...styles.eventTag, background: s.tagBg, color: s.tagColor }}>
-                      {isTask ? (item.status || 'Pending') : item.type}
+                    <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>
+                      {isTask ? (item.status||'Pending') : item.type}
                     </span>
-                    {!isTask && (role === 'Secretary' || role === 'Director') && (
-                      <button style={styles.deleteEvBtn} onClick={() => handleDeleteEvent(item.id)}>🗑</button>
+                    {!isTask && canManage && (
+                      <button style={S.deleteBtn} onClick={() => handleDeleteEvent(item.id)}>🗑</button>
                     )}
                   </div>
                 );
               })}
             </div>
           )}
+
         </div>
       </div>
     </div>
   );
 }
 
-const styles = {
-  page: { display: 'flex', height: '100vh', fontFamily: "'DM Sans',sans-serif", background: '#F0F4FA', overflow: 'hidden' },
-  sidebar: { width: '168px', background: '#122951', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  sidebarLogo: { padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '10px' },
-  logoTitle: { color: '#fff', fontSize: '13px', fontWeight: '700' },
-  logoSub: { color: 'rgba(255,255,255,0.4)', fontSize: '9px' },
-  navItem: { display: 'flex', alignItems: 'center', padding: '9px 16px', margin: '1px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
-  navActive: { background: 'rgba(37,99,235,0.35)', color: '#fff' },
-  sidebarFooter: { marginTop: 'auto', padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar: { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#0EA5E9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff', flexShrink: 0 },
-  userName: { color: '#fff', fontSize: '11px', fontWeight: '600' },
-  userRole: { color: 'rgba(255,255,255,0.45)', fontSize: '9px' },
-  main: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  topbar: { background: '#1A3A6B', padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
-  topbarTitle: { color: '#fff', fontSize: '14px', fontWeight: '700' },
-  topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },
-  topbarRight: { display: 'flex', alignItems: 'center', gap: '10px' },
-  notifBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
-  content: { flex: 1, overflowY: 'auto', padding: '18px 22px' },
-  pageHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' },
-  pageTitle: { fontSize: '16px', fontWeight: '700', color: '#1E293B' },
-  pageSub: { fontSize: '11px', color: '#64748B', marginTop: '2px' },
-  viewToggle: { display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' },
-  viewBtn2: { padding: '7px 16px', fontSize: '11px', fontWeight: '600', color: '#64748B', cursor: 'pointer' },
-  viewBtnActive: { background: '#1A3A6B', color: '#fff' },
-  addBtn: { background: '#1A3A6B', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  addForm: { background: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid #E2E8F0', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '10px' },
-  input: { padding: '9px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '12px', outline: 'none' },
-  calendarLayout: { display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px' },
-  calCard: { background: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  monthNav: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' },
-  navBtn: { background: '#EFF6FF', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '14px', cursor: 'pointer', color: '#1A3A6B', fontWeight: '700' },
-  monthName: { fontSize: '14px', fontWeight: '700', color: '#1E293B' },
-  dayHeaders: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: '6px' },
-  dayHeader: { textAlign: 'center', fontSize: '10px', fontWeight: '600', color: '#94A3B8', padding: '4px 0' },
-  daysGrid: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '4px' },
-  dayCell: { height: '56px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', cursor: 'pointer', position: 'relative', border: '1px solid transparent' },
-  dayCellEmpty: { cursor: 'default' },
-  legend: { display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', flexWrap: 'wrap' },
-  legendItem: { display: 'flex', alignItems: 'center', gap: '5px' },
-  legendDot: { width: '6px', height: '6px', borderRadius: '50%' },
-  legendLabel: { fontSize: '9px', fontWeight: '600', padding: '2px 7px', borderRadius: '10px' },
-  eventsPanel: { background: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflowY: 'auto', maxHeight: 'calc(100vh - 180px)' },
-  eventsPanelTitle: { fontSize: '13px', fontWeight: '700', color: '#1E293B', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' },
-  sectionLabel: { fontSize: '10px', fontWeight: '700', color: '#1E40AF', background: '#DBEAFE', padding: '4px 10px', borderRadius: '6px', marginBottom: '8px', display: 'inline-block' },
-  eventCard: { display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' },
-  eventCardLeft: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
-  eventTime: { fontSize: '10px', fontWeight: '600', color: '#1A3A6B', fontFamily: 'monospace' },
-  eventBar: { flex: 1, width: '2px', background: '#BFDBFE', borderRadius: '1px' },
-  eventCardRight: { flex: 1 },
-  eventTitle: { fontSize: '11px', fontWeight: '600', color: '#1E293B', marginBottom: '5px' },
-  eventTag: { fontSize: '8px', fontWeight: '600', padding: '2px 8px', borderRadius: '10px' },
-  deleteEvBtn: { background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '9px', cursor: 'pointer' },
-  editEvBtn: { background: '#DBEAFE', color: '#1E40AF', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '9px', cursor: 'pointer' },
-  noEvents: { fontSize: '11px', color: '#94A3B8', textAlign: 'center', padding: '20px 0' },
-  upcomingTitle: { fontSize: '11px', fontWeight: '700', color: '#1E293B', margin: '16px 0 10px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' },
-  upcomingItem: { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid #F8FAFC' },
-  upcomingDay: { fontSize: '10px', fontWeight: '600', color: '#2563EB', width: '50px', flexShrink: 0, fontFamily: 'monospace' },
-  upcomingName: { fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
+const S = {
+  page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+  logoWrap:       { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+  logo:           { width:'130px', objectFit:'contain' },
+  portalBanner:   { padding:'14px 16px', borderBottom:'1px solid #E2E8F0' },
+  portalName:     { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'4px' },
+  portalDate:     { color:'#64748B', fontSize:'10px', fontWeight:'500' },
+  divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
+  navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+  navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
+  main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
+  topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+  topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
+  topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
+  topbarUserEmail:{ color:'#94A3B8', fontSize:'9px' },
+  topbarUserRole: { color:'#64748B', fontSize:'10px' },
+  topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
+  notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
+  btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  content:        { flex:1, overflowY:'auto', padding:'16px 20px' },
+  pageHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
+  pageTitle:      { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
+  pageSub:        { fontSize:'11px', color:'#64748B', marginTop:'2px' },
+  viewToggle:     { display:'flex', background:'#fff', border:'1px solid #E2E8F0', borderRadius:'6px', overflow:'hidden' },
+  viewBtn:        { padding:'7px 16px', fontSize:'11px', fontWeight:'600', color:'#64748B', cursor:'pointer' },
+  viewBtnActive:  { background:'#1A3A6B', color:'#fff' },
+  addBtn:         { background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'4px', padding:'8px 16px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  addForm:        { background:'#fff', borderRadius:'10px', padding:'16px', border:'1px solid #E2E8F0', marginBottom:'14px', display:'flex', flexDirection:'column', gap:'10px' },
+  input:          { padding:'8px 12px', borderRadius:'4px', border:'1px solid #E2E8F0', fontSize:'12px', outline:'none', fontFamily:"'DM Sans',sans-serif" },
+  errorMsg:       { color:'#DC2626', fontSize:'11px', background:'#FEE2E2', border:'1px solid #FECACA', borderRadius:'4px', padding:'6px 10px' },
+  calLayout:      { display:'grid', gridTemplateColumns:'1.3fr 1fr', gap:'14px' },
+  calCard:        { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'16px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' },
+  monthNav:       { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' },
+  navBtn:         { background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'5px 12px', fontSize:'13px', cursor:'pointer', color:'#1A3A6B', fontWeight:'700' },
+  monthName:      { fontSize:'14px', fontWeight:'700', color:'#1E293B' },
+  dayHeaders:     { display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:'4px' },
+  dayHeader:      { textAlign:'center', fontSize:'10px', fontWeight:'600', color:'#94A3B8', padding:'4px 0' },
+  daysGrid:       { display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'3px' },
+  dayCell:        { minHeight:'64px', display:'flex', flexDirection:'column', alignItems:'center', padding:'4px 2px', borderRadius:'8px', cursor:'pointer', border:'1px solid transparent', transition:'all 0.15s ease' },
+  dayCellEmpty:   { cursor:'default' },
+  legend:         { display:'flex', gap:'12px', marginTop:'12px', paddingTop:'10px', borderTop:'1px solid #F1F5F9', flexWrap:'wrap' },
+  legendItem:     { display:'flex', alignItems:'center', gap:'4px' },
+  eventsPanel:    { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'14px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflowY:'auto', maxHeight:'calc(100vh - 180px)' },
+  panelTitle:     { fontSize:'13px', fontWeight:'700', color:'#1E293B', marginBottom:'12px', paddingBottom:'10px', borderBottom:'1px solid #F1F5F9' },
+  sectionLabel:   { display:'inline-block', fontSize:'10px', fontWeight:'700', color:'#1E40AF', background:'#DBEAFE', padding:'3px 10px', borderRadius:'6px', marginBottom:'8px' },
+  eventCard:      { padding:'10px 12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0', marginBottom:'8px' },
+  tag:            { fontSize:'8px', fontWeight:'600', padding:'2px 7px', borderRadius:'10px' },
+  editBtn:        { background:'#DBEAFE', color:'#1E40AF', border:'none', borderRadius:'4px', padding:'3px 8px', fontSize:'9px', cursor:'pointer' },
+  deleteBtn:      { background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:'4px', padding:'3px 8px', fontSize:'9px', cursor:'pointer' },
+  empty:          { fontSize:'11px', color:'#94A3B8', textAlign:'center', padding:'16px 0' },
+  upcomingTitle:  { fontSize:'11px', fontWeight:'700', color:'#1E293B', margin:'14px 0 8px', paddingTop:'12px', borderTop:'1px solid #F1F5F9' },
+  upcomingItem:   { display:'flex', alignItems:'center', gap:'8px', padding:'7px 0', borderBottom:'1px solid #F8FAFC' },
 };
 
 export default Calendar;
