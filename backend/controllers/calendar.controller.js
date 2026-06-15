@@ -7,27 +7,55 @@ const createEvent = (req, res) => {
   const created_by = req.user.id;
   const id = uuidv4();
 
+  if (!title || !title.trim()) {
+    return res.json({ success: false, message: 'Event title is required', data: null });
+  }
+
   const conflictSql = `SELECT * FROM events WHERE (start_time < ? AND end_time > ?)`;
 
   db.query(conflictSql, [end_time, start_time], (err, conflicts) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     if (conflicts.length > 0) {
-  const conflict = conflicts[0];
-  const conflictStart = new Date(conflict.start_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
-  const conflictEnd = new Date(conflict.end_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
-  return res.json({ 
-    success: false, 
-    message: `Time conflict with "${conflict.title}" (${conflictStart} – ${conflictEnd})`, 
-    data: null 
-  });
-}
+      const conflict = conflicts[0];
+      const conflictStart = new Date(conflict.start_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+      const conflictEnd = new Date(conflict.end_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+      return res.json({ 
+        success: false, 
+        message: `Time conflict with "${conflict.title}" (${conflictStart} – ${conflictEnd})`, 
+        data: null 
+      });
+    }
 
     const sql = `INSERT INTO events (id, title, description, start_time, end_time, type, visibility, created_by, notes, participants) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(sql, [id, title, description, start_time, end_time, type, visibility, created_by, notes, participants ? JSON.stringify(participants) : null], (err2) => {
-      if (err2) return res.json({ success: false, message: err2.message, data: null });
-      res.json({ success: true, message: 'Event created', data: null });
-    });
+db.query(sql, [id, title, description, start_time, end_time, type, visibility, created_by, notes, participants ? JSON.stringify(participants) : null], (err2) => {
+  if (err2) return res.json({ success: false, message: err2.message, data: null });
+
+  console.log('Event created, sending notifications...');
+  
+  const { v4: uuidv4notify } = require('uuid');
+  const eventDate = new Date(start_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  
+  // Send to ALL active users
+  db.query(`SELECT id FROM users WHERE status = 'active'`, (err3, users) => {
+    console.log('Users found for notification:', users?.length, err3?.message);
+    if (!err3 && users && users.length > 0) {
+      users.forEach(u => {
+        const nid = uuidv4notify();
+        db.query(
+          `INSERT INTO notifications (id, user_id, message, type, read_status) VALUES (?, ?, ?, ?, ?)`,
+          [nid, u.id, `📅 New Event: "${title}" on ${eventDate}`, 'event', 0],
+          (err4) => { 
+            if (err4) console.log('Event notif insert error:', err4.message); 
+            else console.log('Event notif inserted for:', u.id);
+          }
+        );
+      });
+    }
+  });
+
+  res.json({ success: true, message: 'Event created', data: null });
+});
   });
 };
 

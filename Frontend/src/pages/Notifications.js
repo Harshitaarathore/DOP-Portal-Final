@@ -26,7 +26,6 @@ function Notifications() {
     setNotifications(prev => prev.map(n => ({ ...n, read_status: 1 })));
     try {
       await API.put('/user/notifications/read-all');
-      fetchNotifications();
     } catch (err) { console.log(err); }
   };
 
@@ -34,7 +33,6 @@ function Notifications() {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_status: 1 } : n));
     try {
       await API.put(`/user/notifications/${id}/read`);
-      fetchNotifications();
     } catch (err) { console.log(err); }
   };
 
@@ -81,8 +79,13 @@ function Notifications() {
               onClick={() => markRead(n.id)}
             >
               <div style={S.notifIcon}>
-                {n.type === 'meeting' ? '📋' : n.type === 'task' ? '✅' : n.type === 'visitor' ? '👥' : '🔔'}
-              </div>
+  {n.type === 'meeting' ? '📋' 
+  : n.type === 'task' ? '✅' 
+  : n.type === 'visitor' ? '👥' 
+  : n.type === 'announcement' ? '📢'
+  : n.type === 'event' ? '📅'
+  : '🔔'}
+</div>
               <div style={{ flex: 1 }}>
                 <div style={S.notifTitle}>{n.message}</div>
                 <div style={S.notifTime}>{new Date(n.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })} · {new Date(n.created_at).toLocaleTimeString('en-IN', { timeStyle: 'short' })}</div>

@@ -127,6 +127,11 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
   };
   const handleQuickAddEvent = async () => {
   setEventError('');
+  if (!newEvent.title.trim()) { setEventError('Event title is required'); return; }
+  if (!newEvent.start_time) { setEventError('Start time is required'); return; }
+  if (!newEvent.end_time) { setEventError('End time is required'); return; }
+  if (newEvent.start_time >= newEvent.end_time) { setEventError('End time must be after start time'); return; }
+  
   try {
     const res = await API.post('/events', { ...newEvent, visibility: 'public', notes: '' });
     if (res.data.success) {
@@ -344,10 +349,10 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
           {/* STAT CARDS */}
           <div style={S.statGrid}>
             {[
-              { icon: '✉️', num: stats.requests, label: 'Pending Requests', bg: '#EFF6FF' },
-              { icon: '📅', num: stats.meetings, label: "Today's Meetings", bg: '#EFF6FF' },
-              { icon: '✅', num: stats.tasks, label: 'Active Tasks', bg: '#FFFBEB' },
-              { icon: '👥', num: stats.visitors, label: 'Visitors Today', bg: '#F0FDF4' },
+                { icon: '✉️', num: stats.requests, label: 'Pending Requests', bg: '#EFF6FF', path: '/requests' },
+                { icon: '📅', num: stats.meetings, label: "Today's Meetings", bg: '#EFF6FF', path: '/calendar' },
+                { icon: '✅', num: stats.tasks, label: 'Active Tasks', bg: '#FFFBEB', path: '/tasks' },
+                { icon: '👥', num: stats.visitors, label: "Today's Visitor", bg: '#F0FDF4', path: '/visitors' },
             ].map((s, i) => (
               <div 
                 key={i} 
@@ -357,6 +362,7 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
                 }}
                 onMouseEnter={() => setHoveredStat(i)}
                 onMouseLeave={() => setHoveredStat(null)}
+                onClick={() => navigate(s.path)}
               >
                 <div style={{ ...S.statIcon, background: s.bg }}>{s.icon}</div>
                 <div>
@@ -378,7 +384,9 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
               </div>
               {schedule.length === 0 ? <div style={S.empty}>No events today</div> : schedule.map((ev, i) => {
                 const st = getEventTypeStyle(ev.type);
-                const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const time = ev.start_time.includes('T') 
+  ? ev.start_time.split('T')[1].slice(0, 5)
+  : ev.start_time.split(' ')[1].slice(0, 5);
                 return (
                   <div 
                     key={i} 
