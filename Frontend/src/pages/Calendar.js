@@ -5,6 +5,7 @@ import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function Calendar() {
   const navigate = useNavigate();
+  const [weekOffset, setWeekOffset] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
   const [events, setEvents] = useState([]);
@@ -123,6 +124,7 @@ function Calendar() {
 
   const getWeekDays = () => {
     const tod = new Date();
+    tod.setDate(tod.getDate() + weekOffset * 7);
     const start = new Date(tod);
     start.setDate(tod.getDate() - tod.getDay());
     return Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
@@ -315,7 +317,7 @@ function Calendar() {
                       { label:'Task',         bg:'#EDE9FE', color:'#5B21B6' },
                     ].map((l,i) => (
                       <div key={i} style={S.legendItem}>
-                        <div style={{ width:'8px', height:'8px', borderRadius:'2px', background:l.bg, border:`1px solid ${l.color}`, flexShrink:0 }} />
+                        <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:l.bg, border:`1px solid ${l.color}`, flexShrink:0 }} />
                         <span style={{ fontSize:'9px', color:'#64748B' }}>{l.label}</span>
                       </div>
                     ))}
@@ -329,47 +331,41 @@ function Calendar() {
                   {currentMonth.toLocaleString('default', { month:'long' })} {selectedDay}, {currentMonth.getFullYear()}
                 </div>
 
-                {selectedDayEvents.length > 0 && (
-                  <>
-                    <div style={S.sectionLabel}>🗓 Events</div>
-                    {selectedDayEvents.map((ev, i) => {
-                      const s = getEventStyle(ev.type);
-                      const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
-                      return (
-                        <div key={i} style={{ ...S.eventCard, borderLeft:`3px solid ${s.bar}` }}>
-                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'4px' }}>
-                            <div style={{ fontSize:'10px', fontWeight:'700', color:'#1A3A6B', fontFamily:'monospace' }}>{time}</div>
-                            <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
-                          </div>
-                          <div style={{ fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>{canManage ? ev.title : 'Busy'}</div>
-                          {canManage && ev.description && <div style={{ fontSize:'10px', color:'#64748B', marginTop:'3px' }}>📄 {ev.description}</div>}
-                          {canManage && ev.notes && <div style={{ fontSize:'10px', color:'#94A3B8', marginTop:'2px' }}>📝 {ev.notes}</div>}
-                          {canManage && (
-                            <div style={{ display:'flex', gap:'6px', marginTop:'6px' }}>
-                              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️ Edit</button>
-                              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑 Delete</button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
+{selectedDayEvents.length > 0 && (
+  <>
+    <div style={S.sectionLabel}>🗓 Events</div>
+    {selectedDayEvents.map((ev, i) => {
+      const s = getEventStyle(ev.type);
+      const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+      return (
+        <div key={i} style={S.upcomingItem}>
+          <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>{time}</div>
+          <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? ev.title : 'Busy'}</div>
+          <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
+          {canManage && (
+            <div style={{ display:'flex', gap:'4px' }}>
+              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if(t) API.put(`/events/${ev.id}`, {...ev, title:t}).then(fetchEvents); }}>✏️ Edit</button>
+              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑 Delete</button>
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </>
+)}
 
                 {selectedDayTasks.length > 0 && (
-                  <>
-                    <div style={{ ...S.sectionLabel, background:'#EDE9FE', color:'#5B21B6' }}>📌 Task Deadlines</div>
-                    {selectedDayTasks.map((t, i) => (
-                      <div key={i} style={{ ...S.eventCard, borderLeft:'3px solid #8B5CF6' }}>
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'4px' }}>
-                          <div style={{ fontSize:'10px', fontWeight:'700', color:'#5B21B6' }}>DEADLINE</div>
-                          <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
-                        </div>
-                        <div style={{ fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>{t.title}</div>
-                      </div>
-                    ))}
-                  </>
-                )}
+  <>
+    <div style={{ ...S.sectionLabel, background:'#EDE9FE', color:'#5B21B6' }}>📌 Task Deadlines</div>
+    {selectedDayTasks.map((t, i) => (
+      <div key={i} style={S.upcomingItem}>
+        <div style={{ fontSize:'10px', color:'#8B5CF6', fontWeight:'600', width:'48px', flexShrink:0 }}>DEADLINE</div>
+        <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{t.title}</div>
+        <span style={{ ...S.tag, background:'#EDE9FE', color:'#5B21B6' }}>{t.status}</span>
+      </div>
+    ))}
+  </>
+)}
 
                 {selectedDayEvents.length === 0 && selectedDayTasks.length === 0 && (
                   <div style={S.empty}>No events or tasks for this day</div>
@@ -407,10 +403,12 @@ function Calendar() {
           {viewMode === 'week' && (
             <div style={S.calCard}>
               <div style={S.monthNav}>
-                <span style={S.monthName}>
-                  {weekDays[0].toLocaleDateString('en-US', { month:'short', day:'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
-                </span>
-              </div>
+  <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset - 1)}>←</button>
+  <span style={S.monthName}>
+    {weekDays[0].toLocaleDateString('en-US', { month:'short', day:'numeric' })} – {weekDays[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+  </span>
+  <button style={S.navBtn} onClick={() => setWeekOffset(weekOffset + 1)}>→</button>
+</div>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'6px', marginTop:'10px' }}>
                 {weekDays.map((wd, i) => {
                   const d = wd.getDate(), m = wd.getMonth();
@@ -503,9 +501,9 @@ const S = {
   pageHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
   pageTitle:      { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
   pageSub:        { fontSize:'11px', color:'#64748B', marginTop:'2px' },
-  viewToggle:     { display:'flex', background:'#fff', border:'1px solid #E2E8F0', borderRadius:'6px', overflow:'hidden' },
-  viewBtn:        { padding:'7px 16px', fontSize:'11px', fontWeight:'600', color:'#64748B', cursor:'pointer' },
-  viewBtnActive:  { background:'#1A3A6B', color:'#fff' },
+  viewToggle:     { display:'flex', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden', padding:'3px', gap:'3px' },
+  viewBtn:        { padding:'7px 18px', fontSize:'12px', fontWeight:'600', color:'#64748B', cursor:'pointer', borderRadius:'6px' },
+  viewBtnActive:  { background:'#1A3A6B', color:'#fff', borderRadius:'6px' },
   addBtn:         { background:'#1A3A6B', color:'#fff', border:'none', borderRadius:'4px', padding:'8px 16px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   addForm:        { background:'#fff', borderRadius:'10px', padding:'16px', border:'1px solid #E2E8F0', marginBottom:'14px', display:'flex', flexDirection:'column', gap:'10px' },
   input:          { padding:'8px 12px', borderRadius:'4px', border:'1px solid #E2E8F0', fontSize:'12px', outline:'none', fontFamily:"'DM Sans',sans-serif" },
@@ -526,9 +524,9 @@ const S = {
   panelTitle:     { fontSize:'13px', fontWeight:'700', color:'#1E293B', marginBottom:'12px', paddingBottom:'10px', borderBottom:'1px solid #F1F5F9' },
   sectionLabel:   { display:'inline-block', fontSize:'10px', fontWeight:'700', color:'#1E40AF', background:'#DBEAFE', padding:'3px 10px', borderRadius:'6px', marginBottom:'8px' },
   eventCard:      { padding:'10px 12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0', marginBottom:'8px' },
-  tag:            { fontSize:'8px', fontWeight:'600', padding:'2px 7px', borderRadius:'10px' },
-  editBtn:        { background:'#DBEAFE', color:'#1E40AF', border:'none', borderRadius:'4px', padding:'3px 8px', fontSize:'9px', cursor:'pointer' },
-  deleteBtn:      { background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:'4px', padding:'3px 8px', fontSize:'9px', cursor:'pointer' },
+  tag:            { fontSize:'10px', fontWeight:'600', padding:'3px 10px', borderRadius:'12px' },
+  editBtn:        { background:'#DBEAFE', color:'#1E40AF', border:'none', borderRadius:'6px', padding:'5px 12px', fontSize:'10px', cursor:'pointer', fontWeight:'600' },
+  deleteBtn:      { background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:'6px', padding:'5px 12px', fontSize:'10px', cursor:'pointer', fontWeight:'600' },
   empty:          { fontSize:'11px', color:'#94A3B8', textAlign:'center', padding:'16px 0' },
   upcomingTitle:  { fontSize:'11px', fontWeight:'700', color:'#1E293B', margin:'14px 0 8px', paddingTop:'12px', borderTop:'1px solid #F1F5F9' },
   upcomingItem:   { display:'flex', alignItems:'center', gap:'8px', padding:'7px 0', borderBottom:'1px solid #F8FAFC' },

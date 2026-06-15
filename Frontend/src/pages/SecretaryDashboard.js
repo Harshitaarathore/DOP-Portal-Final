@@ -195,26 +195,25 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
 
       {/* ── SIDEBAR ── */}
       <div style={S.sidebar}>
-  <div style={S.logoWrap}>
-    <img src={lnmiitLogo} alt="LNMIIT" style={S.logo} />
-  </div>
-  <div style={S.portalBanner}>
-    <div style={S.portalName}>Director's Office Portal</div>
-    <div style={S.portalDate}>{today}</div>
-  </div>
-  <div style={S.divider} />
-  {navItems.map((item, i) => (
-  <div key={i}
-    style={{ ...S.navItem, ...(item.path === window.location.pathname ? S.navActive : {}), ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {}) }}
-    onMouseEnter={() => setHoveredNav(i)}
-    onMouseLeave={() => setHoveredNav(null)}
-    onClick={() => navigate(item.path)}
-  >
-    <span style={S.navIcon}>{item.icon}</span>
-    {item.label}
-  </div>
+        <div style={S.logoWrap}>
+          <img src={lnmiitLogo} alt="LNMIIT" style={S.logo} />
+        </div>
+        <div style={S.portalBanner}>
+          <div style={S.portalName}>Director's Office Portal</div>
+          <div style={S.portalDate}>{today}</div>
+        </div>
+        <div style={S.divider} />
+          {navItems.map((item, i) => (
+          <div key={i}
+            style={{ ...S.navItem, ...(item.path === window.location.pathname ? S.navActive : {}), ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {}) }}
+            onMouseEnter={() => setHoveredNav(i)}
+            onMouseLeave={() => setHoveredNav(null)}
+            onClick={() => navigate(item.path)}>
+            <span style={S.navIcon}>{item.icon}</span>
+            {item.label}
+          </div>
 ))}
-</div>
+      </div>
 
       {/* ── MAIN ── */}
       <div style={S.main}>
