@@ -21,11 +21,11 @@ function Login() {
         localStorage.setItem('email', res.data.data.email || email);
 
         const role = res.data.data.role;
-        if (role === 'Director')       navigate('/director-dashboard');
+        if (role === 'Director') navigate('/director-dashboard');
         else if (role === 'Secretary') navigate('/dashboard');
-        else if (role === 'Staff')     navigate('/staff-portal');
-        else if (role === 'Faculty')   navigate('/staff-portal');
-        else if (role === 'Visitor')   navigate('/visitor-dashboard');
+        else if (role === 'Staff') navigate('/staff-portal');
+        else if (role === 'Faculty') navigate('/staff-portal');
+        else if (role === 'Visitor') navigate('/visitor-dashboard');
         else navigate('/dashboard');
       } else {
         alert(res.data.message || 'Login failed');
@@ -37,7 +37,7 @@ function Login() {
 
   return (
     <div style={styles.page}>
-
+      <style>{`input::-ms-reveal { display: none; } input::-webkit-contacts-auto-fill-button { display: none; }`}</style>
       {/* NAVBAR */}
       <div style={styles.navbar}>
         <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.navLogo} />
@@ -146,7 +146,7 @@ const styles = {
     height: '40px',
     objectFit: 'contain',
   },
-  navLink: { fontSize:'13px', color:'#2563EB', cursor:'pointer', fontWeight:'600', textAlign:'right', lineHeight:'1.5' },
+  navLink: { fontSize: '13px', color: '#2563EB', cursor: 'pointer', fontWeight: '600', textAlign: 'right', lineHeight: '1.5' },
 
   cardWrapper: {
     flex: 1,
