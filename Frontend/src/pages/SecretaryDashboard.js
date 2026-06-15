@@ -3,12 +3,47 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
 
+// Add animation styles
+const animationStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideDown {
+    from { 
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+// Inject animation styles
+if (!document.getElementById('dashboard-animations')) {
+  const style = document.createElement('style');
+  style.id = 'dashboard-animations';
+  style.textContent = animationStyles;
+  document.head.appendChild(style);
+}
+
 function SecretaryDashboard() {
   const navigate = useNavigate();
-  const [showAnnouncement, setShowAnnouncement] = useState(false);
-  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
   const name = localStorage.getItem('name') || 'User';
   const role = localStorage.getItem('role') || 'Staff';
+  const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
 
   const [stats, setStats] = useState({ requests: 0, meetings: 0, tasks: 0, visitors: 0 });
@@ -18,18 +53,25 @@ function SecretaryDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [quickAddType, setQuickAddType] = useState('event');
   const [newEvent, setNewEvent] = useState({ title: '', start_time: '', end_time: '', type: 'Public' });
   const [newTask, setNewTask] = useState({ title: '', deadline: '', priority: 'Low' });
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '', category: 'General', priority: 'Medium' });
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [hoveredStat, setHoveredStat] = useState(null);
+  const [hoveredSchItem, setHoveredSchItem] = useState(null);
+  const [hoveredReqItem, setHoveredReqItem] = useState(null);
+  const [hoveredAlert, setHoveredAlert] = useState(null);
+  const [hoveredTask, setHoveredTask] = useState(null);
+  const [hoveredBtnId, setHoveredBtnId] = useState(null);
+  const [eventError, setEventError] = useState('');
+  const [announcements, setAnnouncements] = useState([]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-  };
+  const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -46,28 +88,20 @@ function SecretaryDashboard() {
         const todayEvents = eventsRes.data.data.filter(e => e.start_time.split('T')[0] === today);
         setSchedule(todayEvents.slice(0, 4));
         setStats(prev => ({ ...prev, meetings: todayEvents.length }));
-
-        // build alerts from upcoming events
         const upcoming = eventsRes.data.data.filter(e => new Date(e.start_time) > new Date());
-        const alertList = [];
-        upcoming.slice(0, 3).forEach(ev => {
-          alertList.push({
-            ic: ev.type === 'Confidential' ? '🔴' : '🔵',
-            title: ev.title,
-            body: new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-            bg: ev.type === 'Confidential' ? '#FFF1F2' : '#EFF6FF',
-            border: ev.type === 'Confidential' ? '#FECDD3' : '#BFDBFE'
-          });
-        });
-        setAlerts(alertList);
+        setAlerts(upcoming.slice(0, 3).map(ev => ({
+          ic: ev.type === 'Confidential' ? '🔴' : '🔵',
+          title: ev.title,
+          body: new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          bg: ev.type === 'Confidential' ? '#FFF1F2' : '#EFF6FF',
+          border: ev.type === 'Confidential' ? '#FECDD3' : '#BFDBFE'
+        })));
       }
-
       if (reqRes.data.success) {
         const pending = reqRes.data.data.filter(r => r.status === 'Pending');
         setRequests(pending.slice(0, 4));
         setStats(prev => ({ ...prev, requests: pending.length }));
       }
-
       if (tasksRes.data.success) {
         const p = tasksRes.data.data['Pending'].length;
         const ip = tasksRes.data.data['In Progress'].length;
@@ -75,258 +109,291 @@ function SecretaryDashboard() {
         setTasks({ pending: p, inProgress: ip, completed: c });
         setStats(prev => ({ ...prev, tasks: p + ip }));
       }
+      if (visitorsRes.data.success) setStats(prev => ({ ...prev, visitors: visitorsRes.data.data.length }));
+      if (notifRes.data.success) setNotifications(notifRes.data.data.filter(n => n.read_status === 0).slice(0, 3));
+    } catch (err) { console.log('Dashboard fetch error:', err); }
 
-      if (visitorsRes.data.success) {
-        setStats(prev => ({ ...prev, visitors: visitorsRes.data.data.length }));
-      }
+    const announcementsRes = await API.get('/user/announcements');
+if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.slice(0, 3));
 
-      if (notifRes.data.success) {
-        setNotifications(notifRes.data.data.filter(n => n.read_status === 0).slice(0, 3));
-      }
 
-    } catch (err) {
-      console.log('Dashboard fetch error:', err);
-    }
   };
 
   const handleApprove = async (id) => {
-    try {
-      const res = await API.put(`/meetings/${id}/approve`);
-      if (res.data.success) {
-        alert('Request approved!');
-        fetchDashboardData();
-      }
-    } catch (err) {
-      alert('Failed to approve');
-    }
+    try { const res = await API.put(`/meetings/${id}/approve`); if (res.data.success) { alert('Approved!'); fetchDashboardData(); } } catch { alert('Failed'); }
   };
-
   const handleReject = async (id) => {
-    try {
-      const res = await API.put(`/meetings/${id}/reject`);
-      if (res.data.success) {
-        alert('Request rejected!');
-        fetchDashboardData();
-      }
-    } catch (err) {
-      alert('Failed to reject');
-    }
+    try { const res = await API.put(`/meetings/${id}/reject`); if (res.data.success) { alert('Rejected!'); fetchDashboardData(); } } catch { alert('Failed'); }
   };
-
   const handleQuickAddEvent = async () => {
-    try {
-      const res = await API.post('/events', { ...newEvent, visibility: 'public', notes: '' });
-      if (res.data.success) {
-        alert('Event created!');
-        setShowQuickAdd(false);
-        setNewEvent({ title: '', start_time: '', end_time: '', type: 'Public' });
-        fetchDashboardData();
-      } else {
-        alert(res.data.message);
-      }
-    } catch (err) {
-      alert('Failed to create event');
+  setEventError('');
+  try {
+    const res = await API.post('/events', { ...newEvent, visibility: 'public', notes: '' });
+    if (res.data.success) {
+      setShowQuickAdd(false);
+      setNewEvent({ title: '', start_time: '', end_time: '', type: 'Public' });
+      fetchDashboardData();
+    } else {
+      setEventError(res.data.message);
     }
-  };
-
+  } catch { setEventError('Failed to create event'); }
+};
   const handleQuickAddTask = async () => {
-    try {
-      const res = await API.post('/tasks', newTask);
-      if (res.data.success) {
-        alert('Task created!');
-        setShowQuickAdd(false);
-        setNewTask({ title: '', deadline: '', priority: 'Low' });
-        fetchDashboardData();
-      }
-    } catch (err) {
-      alert('Failed to create task');
-    }
+    try { const res = await API.post('/tasks', newTask); if (res.data.success) { alert('Task created!'); setShowQuickAdd(false); setNewTask({ title: '', deadline: '', priority: 'Low' }); fetchDashboardData(); } } catch { alert('Failed'); }
   };
+  const handlePostAnnouncement = async () => {
+  if (!newAnnouncement.title || !newAnnouncement.content) { alert('Title and content required'); return; }
+  try {
+    const res = await API.post('/user/announcements', newAnnouncement);
+    if (res.data.success) {
+      setShowAnnouncement(false);
+      setNewAnnouncement({ title: '', content: '', category: 'General', priority: 'Medium' });
+      fetchDashboardData();
+    }
+  } catch { alert('Failed'); }
+};
 
   const getEventTypeStyle = (type) => {
     if (type === 'Confidential') return { tagBg: '#FEE2E2', tagColor: '#991B1B', dot: '#EF4444' };
     if (type === 'Internal') return { tagBg: '#FEF3C7', tagColor: '#92400E', dot: '#F59E0B' };
     return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
   };
-
   const getPriorityStyle = (priority) => {
     if (priority === 'High') return { priBg: '#FEE2E2', priColor: '#991B1B' };
     if (priority === 'Medium') return { priBg: '#DBEAFE', priColor: '#1E40AF' };
     return { priBg: '#DCFCE7', priColor: '#166534' };
   };
 
-  const handlePostAnnouncement = async () => {
-    if (!newAnnouncement.title || !newAnnouncement.content) { alert('Title and content required'); return; }
-    try {
-      const res = await API.post('/user/announcements', newAnnouncement);
-      if (res.data.success) {
-        alert('Announcement posted!');
-        setShowAnnouncement(false);
-        setNewAnnouncement({ title: '', content: '' });
-      }
-    } catch (err) {
-      alert('Failed to post announcement');
-    }
-  };
-
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const navItems = [
+  { label: 'Dashboard',     path: '/dashboard',      icon: '🏠' },
+  { label: 'Calendar',      path: '/calendar',       icon: '📅' },
+  { label: 'Requests',      path: '/requests',       icon: '📋' },
+  { label: 'Documents',     path: '/documents',      icon: '📁' },
+  { label: 'Visitors',      path: '/visitors',       icon: '👥' },
+  { label: 'Communication', path: '/communications', icon: '💬' },
+  { label: 'Tasks',         path: '/tasks',          icon: '✅' },
+  { label: 'Announcements', path: '/announcements',  icon: '📢' },
+  { label: 'Reports',       path: '/reports',        icon: '📊' },
+  { label: 'Settings',      path: '/settings',       icon: '⚙️' },
+];
+
+  const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+};
 
   return (
-    <div style={styles.page}>
-      {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
-          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>Director's Office Portal</div>
-          <div style={styles.logoSub}>Director's Office</div>
-        </div>
-        {[
-          { label: 'Dashboard', path: '/dashboard' },
-          { label: 'Calendar', path: '/calendar' },
-          { label: 'Requests', path: '/requests' },
-          { label: 'Documents', path: '/documents' },
-          { label: 'Visitors', path: '/visitors' },
-          { label: 'Communication', path: '/communications' },
-          { label: 'Tasks', path: '/tasks' },
-          { label: 'Reports', path: '/reports' },
-          { label: 'Settings', path: '/settings' },
-        ].map((item, i) => (
-          <div key={i}
-            style={{ ...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {}) }}
-            onClick={() => navigate(item.path)}
-          >
-            {item.label}
-          </div>
-        ))}
-        <div style={styles.sidebarFooter}>
-          <div style={styles.avatar}>{initials}</div>
-          <div style={{ flex: 1 }}>
-            <div style={styles.userName}>{name}</div>
-            <div style={styles.userRole}>{role}</div>
-          </div>
-        </div>
-      </div>
+    <div style={S.page}>
 
-      {/* MAIN */}
-      <div style={styles.main}>
+      {/* ── SIDEBAR ── */}
+      <div style={S.sidebar}>
+  <div style={S.logoWrap}>
+    <img src={lnmiitLogo} alt="LNMIIT" style={S.logo} />
+  </div>
+  <div style={S.portalBanner}>
+    <div style={S.portalName}>Director's Office Portal</div>
+    <div style={S.portalDate}>{today}</div>
+  </div>
+  <div style={S.divider} />
+  {navItems.map((item, i) => (
+  <div key={i}
+    style={{ ...S.navItem, ...(item.path === window.location.pathname ? S.navActive : {}), ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {}) }}
+    onMouseEnter={() => setHoveredNav(i)}
+    onMouseLeave={() => setHoveredNav(null)}
+    onClick={() => navigate(item.path)}
+  >
+    <span style={S.navIcon}>{item.icon}</span>
+    {item.label}
+  </div>
+))}
+</div>
+
+      {/* ── MAIN ── */}
+      <div style={S.main}>
+
         {/* TOPBAR */}
-        <div style={styles.topbar}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
-            <div>
-              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>{today}</div>
-            </div>
-          </div>
-          <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>
-              🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}
-            </div>
-            <button style={styles.quickAddBtn} onClick={() => setShowQuickAdd(!showQuickAdd)}>
-              + Quick Add
-            </button>
-            <button style={{ ...styles.quickAddBtn, background: '#0EA5E9' }} onClick={() => setShowAnnouncement(!showAnnouncement)}>
-              📢 Announce
-            </button>
-            <button style={styles.logoutTopBtn} onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-        </div>
-
+      <div style={S.topbar}>
+  <div style={S.topbarUser}>
+    <div style={S.topbarAvatar}>{initials}</div>
+    <div>
+      <div style={S.topbarUserName}>{name}</div>
+      <div style={S.topbarUserEmail}>{email}</div>
+      <div style={S.topbarUserRole}>{role}</div>
+    </div>
+  </div>
+  <div style={S.topbarRight}>
+    <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
+      🔔
+      {notifications.length > 0 && <span style={S.notifBadge}>{notifications.length}</span>}
+    </div>
+    <button
+      style={{ ...S.btnOutline, ...(hoveredBtn === 'quickadd' ? S.btnOutlineHover : {}) }}
+      onMouseEnter={() => setHoveredBtn('quickadd')}
+      onMouseLeave={() => setHoveredBtn(null)}
+      onClick={() => { setShowQuickAdd(!showQuickAdd); setShowAnnouncement(false); }}
+    >
+      Quick Add
+    </button>
+    <button
+      style={{ ...S.btnOutline, ...(hoveredBtn === 'announce' ? S.btnOutlineHover : {}) }}
+      onMouseEnter={() => setHoveredBtn('announce')}
+      onMouseLeave={() => setHoveredBtn(null)}
+      onClick={() => { setShowAnnouncement(!showAnnouncement); setShowQuickAdd(false); }}
+    >
+      📢 Announcement
+    </button>
+    <button
+      style={{ ...S.btnLogout, ...(hoveredBtn === 'logout' ? S.btnLogoutHover : {}) }}
+      onMouseEnter={() => setHoveredBtn('logout')}
+      onMouseLeave={() => setHoveredBtn(null)}
+      onClick={handleLogout}
+    >
+      ⏻ Logout
+    </button>
+  </div>
+</div>
         {/* QUICK ADD PANEL */}
         {showQuickAdd && (
-          <div style={styles.quickAddPanel}>
-            <div style={styles.quickAddTabs}>
-              <div style={{ ...styles.quickTab, ...(quickAddType === 'event' ? styles.quickTabActive : {}) }} onClick={() => setQuickAddType('event')}>+ Event</div>
-              <div style={{ ...styles.quickTab, ...(quickAddType === 'task' ? styles.quickTabActive : {}) }} onClick={() => setQuickAddType('task')}>+ Task</div>
+          <div style={S.panel}>
+            <div style={S.panelTabs}>
+              <div style={{ ...S.tab, ...(quickAddType === 'event' ? S.tabActive : {}) }} onClick={() => setQuickAddType('event')}>Event</div>
+              <div style={{ ...S.tab, ...(quickAddType === 'task' ? S.tabActive : {}) }} onClick={() => setQuickAddType('task')}>Task</div>
             </div>
             {quickAddType === 'event' ? (
-              <div style={styles.quickForm}>
-                <input style={styles.quickInput} placeholder="Event title" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
-                <input style={styles.quickInput} type="datetime-local" value={newEvent.start_time} onChange={e => setNewEvent({ ...newEvent, start_time: e.target.value })} />
-                <input style={styles.quickInput} type="datetime-local" value={newEvent.end_time} onChange={e => setNewEvent({ ...newEvent, end_time: e.target.value })} />
-                <select style={styles.quickInput} value={newEvent.type} onChange={e => setNewEvent({ ...newEvent, type: e.target.value })}>
-                  <option>Public</option>
-                  <option>Internal</option>
-                  <option>Confidential</option>
+              <div style={S.panelForm}>
+                <input style={S.pInput} placeholder="Event title" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
+                <input style={S.pInput} type="datetime-local" value={newEvent.start_time} onChange={e => setNewEvent({ ...newEvent, start_time: e.target.value })} />
+                <input style={S.pInput} type="datetime-local" value={newEvent.end_time} onChange={e => setNewEvent({ ...newEvent, end_time: e.target.value })} />
+                <select style={S.pInput} value={newEvent.type} onChange={e => setNewEvent({ ...newEvent, type: e.target.value })}>
+                  <option>Public</option><option>Internal</option><option>Confidential</option>
                 </select>
-                <button style={styles.quickSaveBtn} onClick={handleQuickAddEvent}>Save Event</button>
+                {eventError && (
+  <div style={{ color:'#DC2626', fontSize:'11px', background:'#FEE2E2', border:'1px solid #FECACA', borderRadius:'4px', padding:'6px 10px', flexShrink:0, maxWidth:'300px' }}>
+    ⚠️ {eventError}
+  </div>
+)}
+                <button style={S.pBtn} onClick={handleQuickAddEvent}>Save Event</button>
               </div>
             ) : (
-              <div style={styles.quickForm}>
-                <input style={styles.quickInput} placeholder="Task title" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} />
-                <input style={styles.quickInput} type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} />
-                <select style={styles.quickInput} value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })}>
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
+              <div style={S.panelForm}>
+                <input style={S.pInput} placeholder="Task title" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} />
+                <input style={S.pInput} type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} />
+                <select style={S.pInput} value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })}>
+                  <option>Low</option><option>Medium</option><option>High</option>
                 </select>
-                <button style={styles.quickSaveBtn} onClick={handleQuickAddTask}>Save Task</button>
+                <button style={S.pBtn} onClick={handleQuickAddTask}>Save Task</button>
               </div>
             )}
           </div>
         )}
 
+        {/* ANNOUNCE PANEL */}
         {showAnnouncement && (
-          <div style={styles.quickAddPanel}>
-            <div style={styles.quickForm}>
-              <input style={styles.quickInput} placeholder="Announcement title" value={newAnnouncement.title} onChange={e => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })} />
-              <input style={styles.quickInput} placeholder="Content" value={newAnnouncement.content} onChange={e => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })} />
-              <button style={styles.quickSaveBtn} onClick={handlePostAnnouncement}>Post</button>
-              <button style={{ ...styles.quickSaveBtn, background: '#64748B' }} onClick={() => setShowAnnouncement(false)}>Cancel</button>
-            </div>
-          </div>
-        )}
+  <div style={S.panel}>
+    <div style={S.panelForm}>
+      <input
+        style={{ ...S.pInput, flex: 2 }}
+        placeholder="Announcement title *"
+        value={newAnnouncement.title}
+        onChange={e => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+      />
+      <select
+        style={{ ...S.pInput, flex: 1 }}
+        value={newAnnouncement.category || 'General'}
+        onChange={e => setNewAnnouncement({ ...newAnnouncement, category: e.target.value })}
+      >
+        <option>General</option>
+        <option>Academic</option>
+        <option>Meeting</option>
+        <option>Placement</option>
+        <option>Research</option>
+        <option>Holiday</option>
+      </select>
+      <select
+        style={{ ...S.pInput, flex: 1 }}
+        value={newAnnouncement.priority || 'Medium'}
+        onChange={e => setNewAnnouncement({ ...newAnnouncement, priority: e.target.value })}
+      >
+        <option>Low</option>
+        <option>Medium</option>
+        <option>High</option>
+      </select>
+      <input
+        style={{ ...S.pInput, flex: 3 }}
+        placeholder="Content *"
+        value={newAnnouncement.content}
+        onChange={e => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+      />
+      <button style={S.pBtn} onClick={handlePostAnnouncement}>Post</button>
+      <button style={S.pBtnCancel} onClick={() => setShowAnnouncement(false)}>Cancel</button>
+    </div>
+  </div>
+)}
 
-        <div style={styles.content}>
+        {/* CONTENT */}
+        <div style={S.content}>
+
           {/* GREETING */}
-          <div style={styles.greeting}>
-            Good morning, <span style={{ color: '#2563EB', fontWeight: '700' }}>{name}</span>
-            &nbsp;|&nbsp; Have a productive day!
+          <div style={S.greeting}>
+            {getGreeting()}, <span style={{ color:'#2563EB', fontWeight:'700' }}>{name}</span> &nbsp;|&nbsp; Have a productive day!
           </div>
 
           {/* STAT CARDS */}
-          <div style={styles.statGrid}>
+          <div style={S.statGrid}>
             {[
               { icon: '✉️', num: stats.requests, label: 'Pending Requests', bg: '#EFF6FF' },
               { icon: '📅', num: stats.meetings, label: "Today's Meetings", bg: '#EFF6FF' },
               { icon: '✅', num: stats.tasks, label: 'Active Tasks', bg: '#FFFBEB' },
               { icon: '👥', num: stats.visitors, label: 'Visitors Today', bg: '#F0FDF4' },
             ].map((s, i) => (
-              <div key={i} style={styles.statCard}>
-                <div style={{ ...styles.statIcon, background: s.bg }}>{s.icon}</div>
+              <div 
+                key={i} 
+                style={{ 
+                  ...S.statCard,
+                  ...(hoveredStat === i ? { boxShadow:'0 4px 12px rgba(37,99,235,0.15)', transform:'translateY(-1px)' } : {})
+                }}
+                onMouseEnter={() => setHoveredStat(i)}
+                onMouseLeave={() => setHoveredStat(null)}
+              >
+                <div style={{ ...S.statIcon, background: s.bg }}>{s.icon}</div>
                 <div>
-                  <div style={styles.statNum}>{s.num}</div>
-                  <div style={styles.statLabel}>{s.label}</div>
+                  <div style={S.statNum}>{s.num}</div>
+                  <div style={S.statLabel}>{s.label}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* TOP ROW - 3 COLUMNS */}
-          <div style={styles.threeCol}>
+          {/* THREE COLUMNS */}
+          <div style={S.threeCol}>
 
             {/* TODAY'S SCHEDULE */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>📅 Today's Schedule</span>
-                <span style={styles.viewAll} onClick={() => navigate('/calendar')}>View all →</span>
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.cardTitle}>📅 Today's Schedule</span>
+                <span style={S.viewAll} onClick={() => navigate('/calendar')}>View all →</span>
               </div>
-              {schedule.length === 0 ? (
-                <div style={styles.emptyMsg}>No events today</div>
-              ) : schedule.map((ev, i) => {
-                const s = getEventTypeStyle(ev.type);
+              {schedule.length === 0 ? <div style={S.empty}>No events today</div> : schedule.map((ev, i) => {
+                const st = getEventTypeStyle(ev.type);
                 const time = new Date(ev.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                 return (
-                  <div key={i} style={styles.schItem}>
-                    <span style={styles.schTime}>{time}</span>
-                    <div style={{ ...styles.dot, background: s.dot }}></div>
+                  <div 
+                    key={i} 
+                    style={{ 
+                      ...S.schItem,
+                      ...(hoveredSchItem === i ? { background:'#F8FAFC' } : {})
+                    }}
+                    onMouseEnter={() => setHoveredSchItem(i)}
+                    onMouseLeave={() => setHoveredSchItem(null)}
+                  >
+                    <span style={S.schTime}>{time}</span>
+                    <div style={{ ...S.dot, background: st.dot }} />
                     <div style={{ flex: 1 }}>
-                      <div style={styles.schTitle}>{ev.title}</div>
-                      <div style={styles.schStatus}>
-                        <span style={{ ...styles.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>
-                      </div>
+                      <div style={S.schTitle}>{ev.title}</div>
+                      <span style={{ ...S.tag, background: st.tagBg, color: st.tagColor }}>{ev.type}</span>
                     </div>
                   </div>
                 );
@@ -334,23 +401,51 @@ function SecretaryDashboard() {
             </div>
 
             {/* PENDING REQUESTS */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>📋 Pending Requests</span>
-                <span style={styles.viewAll} onClick={() => navigate('/requests')}>View all →</span>
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.cardTitle}>📋 Pending Requests</span>
+                <span style={S.viewAll} onClick={() => navigate('/requests')}>View all →</span>
               </div>
-              {requests.length === 0 ? (
-                <div style={styles.emptyMsg}>No pending requests</div>
-              ) : requests.map((r, i) => {
-                const s = getPriorityStyle(r.priority);
+              {requests.length === 0 ? <div style={S.empty}>No pending requests</div> : requests.map((r, i) => {
+                const st = getPriorityStyle(r.priority);
                 return (
-                  <div key={i} style={styles.reqItem}>
+                  <div 
+                    key={i} 
+                    style={{ 
+                      ...S.reqItem,
+                      ...(hoveredReqItem === i ? { background:'#F8FAFC', paddingLeft:'16px' } : {})
+                    }}
+                    onMouseEnter={() => setHoveredReqItem(i)}
+                    onMouseLeave={() => setHoveredReqItem(null)}
+                  >
                     <div style={{ flex: 1 }}>
-                      <div style={styles.reqId}>#{r.id.slice(0, 8)}</div>
-                      <div style={styles.reqName}>{r.purpose ? r.purpose.slice(0, 25) + '...' : 'No purpose'}</div>
-                      <span style={{ ...styles.tag, background: s.priBg, color: s.priColor }}>{r.priority}</span>
+                      <div style={S.reqId}>#{r.id.slice(0, 8)}</div>
+                      <div style={S.reqName}>{r.purpose ? r.purpose.slice(0, 25) + '...' : 'No purpose'}</div>
+                      <span style={{ ...S.tag, background: st.priBg, color: st.priColor }}>{r.priority}</span>
                     </div>
-                    <div style={styles.reqBtns}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button 
+                        style={{ 
+                          ...S.approveBtn,
+                          ...(hoveredBtnId === `approve-${r.id}` ? { boxShadow:'0 2px 8px rgba(34, 197, 94, 0.3)', transform:'scale(1.05)' } : {})
+                        }}
+                        onMouseEnter={() => setHoveredBtnId(`approve-${r.id}`)}
+                        onMouseLeave={() => setHoveredBtnId(null)}
+                        onClick={() => handleApprove(r.id)}
+                      >
+                        ✓
+                      </button>
+                      <button 
+                        style={{ 
+                          ...S.rejectBtn,
+                          ...(hoveredBtnId === `reject-${r.id}` ? { boxShadow:'0 2px 8px rgba(239, 68, 68, 0.3)', transform:'scale(1.05)' } : {})
+                        }}
+                        onMouseEnter={() => setHoveredBtnId(`reject-${r.id}`)}
+                        onMouseLeave={() => setHoveredBtnId(null)}
+                        onClick={() => handleReject(r.id)}
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                 );
@@ -358,18 +453,26 @@ function SecretaryDashboard() {
             </div>
 
             {/* ALERTS */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>🚨 Alerts</span>
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.cardTitle}>🚨 Alerts</span>
               </div>
-              {alerts.length === 0 ? (
-                <div style={styles.emptyMsg}>No upcoming alerts</div>
-              ) : alerts.map((a, i) => (
-                <div key={i} style={{ ...styles.alertItem, background: a.bg, border: `1px solid ${a.border}` }}>
+              {alerts.length === 0 ? <div style={S.empty}>No upcoming alerts</div> : alerts.map((a, i) => (
+                <div 
+                  key={i} 
+                  style={{ 
+                    ...S.alertItem, 
+                    background: a.bg, 
+                    border: `1px solid ${a.border}`,
+                    ...(hoveredAlert === i ? { boxShadow:'0 2px 8px rgba(0,0,0,0.08)' } : {})
+                  }}
+                  onMouseEnter={() => setHoveredAlert(i)}
+                  onMouseLeave={() => setHoveredAlert(null)}
+                >
                   <span style={{ fontSize: '16px' }}>{a.ic}</span>
                   <div>
-                    <div style={styles.alertTitle}>{a.title}</div>
-                    <div style={styles.alertBody}>{a.body}</div>
+                    <div style={S.alertTitle}>{a.title}</div>
+                    <div style={S.alertBody}>{a.body}</div>
                   </div>
                 </div>
               ))}
@@ -377,24 +480,47 @@ function SecretaryDashboard() {
           </div>
 
           {/* TASKS SUMMARY */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span style={styles.cardTitle}>✅ Tasks Summary</span>
-              <span style={styles.viewAll} onClick={() => navigate('/tasks')}>View board →</span>
+          <div style={S.card}>
+            <div style={S.cardHead}>
+              <span style={S.cardTitle}>✅ Tasks Summary</span>
+              <span style={S.viewAll} onClick={() => navigate('/tasks')}>View board →</span>
             </div>
-            <div style={styles.taskSummary}>
+            <div style={S.taskGrid}>
               {[
                 { label: 'Pending', num: tasks.pending, bg: '#FEF3C7', color: '#92400E' },
                 { label: 'In Progress', num: tasks.inProgress, bg: '#DBEAFE', color: '#1E40AF' },
                 { label: 'Completed', num: tasks.completed, bg: '#DCFCE7', color: '#166534' },
               ].map((t, i) => (
-                <div key={i} style={{ ...styles.taskSummaryCard, background: t.bg }}>
-                  <div style={{ ...styles.taskSummaryNum, color: t.color }}>{t.num}</div>
-                  <div style={styles.taskSummaryLabel}>{t.label}</div>
+                <div 
+                  key={i} 
+                  style={{ 
+                    ...S.taskCard, 
+                    background: t.bg,
+                    ...(hoveredTask === i ? { boxShadow:'0 4px 12px rgba(0,0,0,0.1)', transform:'translateY(-2px)' } : {})
+                  }}
+                  onMouseEnter={() => setHoveredTask(i)}
+                  onMouseLeave={() => setHoveredTask(null)}
+                >
+                  <div style={{ ...S.taskNum, color: t.color }}>{t.num}</div>
+                  <div style={S.taskLabel}>{t.label}</div>
                 </div>
               ))}
             </div>
           </div>
+
+          <div style={S.card}>
+  <div style={S.cardHead}>
+    <span style={S.cardTitle}>📢 Recent Announcements</span>
+    <span style={S.viewAll} onClick={() => navigate('/announcements')}>View all →</span>
+  </div>
+  {announcements.length === 0 ? <div style={S.empty}>No announcements</div> : announcements.map((a, i) => (
+    <div key={i} style={{ padding:'10px 14px', borderBottom:'1px solid #F8FAFC' }}>
+      <div style={{ fontSize:'12px', fontWeight:'700', color:'#1E293B', marginBottom:'3px' }}>{a.title}</div>
+      <div style={{ fontSize:'11px', color:'#64748B' }}>{a.content}</div>
+      <div style={{ fontSize:'9px', color:'#94A3B8', marginTop:'4px' }}>{new Date(a.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
+    </div>
+  ))}
+</div>
 
         </div>
       </div>
@@ -402,72 +528,99 @@ function SecretaryDashboard() {
   );
 }
 
-const styles = {
-  page: { display: 'flex', height: '100vh', fontFamily: "'DM Sans',sans-serif", background: '#F0F4FA', overflow: 'hidden' },
-  sidebar: { width: '168px', background: '#122951', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  sidebarLogo: { padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '10px' },
-  logoRow: { display: 'flex', gap: '6px', marginBottom: '8px' },
-  badge: { width: '26px', height: '26px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '11px' },
-  logoTitle: { color: '#fff', fontSize: '13px', fontWeight: '700' },
-  logoSub: { color: 'rgba(255,255,255,0.4)', fontSize: '9px' },
-  navItem: { display: 'flex', alignItems: 'center', padding: '9px 16px', margin: '1px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
-  navActive: { background: 'rgba(37,99,235,0.35)', color: '#fff' },
-  sidebarFooter: { marginTop: 'auto', padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar: { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#0EA5E9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff', flexShrink: 0 },
-  userName: { color: '#fff', fontSize: '11px', fontWeight: '600' },
-  userRole: { color: 'rgba(255,255,255,0.45)', fontSize: '9px' },
-  logoutBtn: { color: 'rgba(255,255,255,0.5)', fontSize: '16px', cursor: 'pointer', padding: '4px' },
-  main: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  topbar: { background: '#1A3A6B', padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
-  topbarTitle: { color: '#fff', fontSize: '14px', fontWeight: '700' },
-  topbarSub: { color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginTop: '1px' },
-  topbarRight: { display: 'flex', alignItems: 'center', gap: '10px' },
-  notifBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer' },
-  quickAddBtn: { background: '#2563EB', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
-  rolePill: { background: 'rgba(37,99,235,0.3)', border: '1px solid rgba(37,99,235,0.5)', borderRadius: '20px', padding: '5px 12px', fontSize: '11px', color: '#fff', fontWeight: '600', cursor: 'pointer' },
-  quickAddPanel: { background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '12px 22px', display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 },
-  quickAddTabs: { display: 'flex', gap: '8px' },
-  quickTab: { padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: '600', color: '#64748B', cursor: 'pointer', background: '#F8FAFC', border: '1px solid #E2E8F0' },
-  quickTabActive: { background: '#1A3A6B', color: '#fff', border: '1px solid #1A3A6B' },
-  quickForm: { display: 'flex', alignItems: 'center', gap: '8px', flex: 1 },
-  quickInput: { border: '1px solid #E2E8F0', borderRadius: '8px', padding: '7px 12px', fontSize: '11px', outline: 'none', flex: 1 },
-  quickSaveBtn: { background: '#1A3A6B', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 },
-  content: { flex: 1, overflowY: 'auto', padding: '18px 22px' },
-  greeting: { fontSize: '13px', color: '#475569', marginBottom: '16px' },
-  statGrid: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '16px' },
-  statCard: { background: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  statIcon: { width: '42px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 },
-  statNum: { fontSize: '22px', fontWeight: '700', color: '#1E293B', lineHeight: 1 },
-  statLabel: { fontSize: '10px', color: '#64748B', marginTop: '3px', fontWeight: '500' },
-  threeCol: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '14px' },
-  card: { background: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: '12px' },
-  cardHeader: { padding: '13px 16px 10px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontSize: '12px', fontWeight: '700', color: '#1E293B' },
-  viewAll: { fontSize: '10px', color: '#2563EB', fontWeight: '600', cursor: 'pointer' },
-  schItem: { display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 16px', borderBottom: '1px solid #F8FAFC' },
-  schTime: { fontSize: '10px', color: '#94A3B8', width: '36px', flexShrink: 0, fontFamily: 'monospace', marginTop: '2px' },
-  dot: { width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, marginTop: '4px' },
-  schTitle: { fontSize: '11px', fontWeight: '600', color: '#1E293B', marginBottom: '3px' },
-  schStatus: { display: 'flex', gap: '4px' },
-  tag: { fontSize: '8px', fontWeight: '600', padding: '3px 8px', borderRadius: '10px', flexShrink: 0 },
-  reqItem: { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: '1px solid #F8FAFC' },
-  reqId: { fontSize: '9px', color: '#94A3B8', marginBottom: '2px' },
-  reqName: { fontSize: '11px', fontWeight: '600', color: '#1E293B', marginBottom: '3px' },
-  reqBtns: { display: 'flex', gap: '4px', flexShrink: 0 },
-  approveBtn: { background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
-  rejectBtn: { background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
-  alertItem: { display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '9px', margin: '8px' },
-  alertTitle: { fontSize: '11px', fontWeight: '700', color: '#1E293B', marginBottom: '2px' },
-  alertBody: { fontSize: '9px', color: '#64748B', lineHeight: 1.4 },
-  taskSummary: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', padding: '14px 16px' },
-  taskSummaryCard: { borderRadius: '10px', padding: '14px', textAlign: 'center' },
-  taskSummaryNum: { fontSize: '28px', fontWeight: '700', lineHeight: 1, marginBottom: '4px' },
-  taskSummaryLabel: { fontSize: '11px', color: '#64748B', fontWeight: '500' },
-  emptyMsg: { padding: '16px', fontSize: '11px', color: '#94A3B8', textAlign: 'center' },
-  logoutTopBtn: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '6px 14px', color: '#FCA5A5', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
-  topbarSub: { color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginTop: '1px' },
+const S = {
+  // PAGE
+  page:       { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+
+  // SIDEBAR
+  logoWrap:    { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+logo:        { width:'130px', objectFit:'contain' },
+portalBanner: { padding:'14px 16px', borderBottom:'1px solid #E2E8F0' },
+portalName:   { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px', fontFamily:"'DM Sans',sans-serif" },
+portalInst:   null, // DELETE this line entirely
+portalDate:   { color:'#64748B', fontSize:'11px', fontWeight:'500', fontFamily:"'DM Sans',sans-serif" },
+sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none' },
+navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+
+
+  // MAIN
+  main:       { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
+
+  // TOPBAR
+topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
+topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
+topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.2 },
+topbarUserEmail:{ color:'#94A3B8', fontSize:'9px', marginTop:'1px' },
+topbarUserRole: { color:'#64748B', fontSize:'10px', marginTop:'1px' },
+topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
+notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer', transition:'all 0.2s ease' },
+notifBadge:     { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+
+  // PANEL
+  panel:      { background:'#fff', borderBottom:'1px solid #E2E8F0', padding:'12px 22px', display:'flex', alignItems:'center', gap:'16px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+panelTabs:  { display:'flex', gap:'6px' },
+tab:        { padding:'7px 16px', borderRadius:'4px', fontSize:'12px', fontWeight:'600', color:'#1A3A6B', cursor:'pointer', background:'transparent', border:'1px solid #1A3A6B', transition:'all 0.2s ease' },
+tabActive:  { background:'#1A3A6B', color:'#fff', border:'1px solid #1A3A6B' },
+panelForm:  { display:'flex', alignItems:'center', gap:'8px', flex:1 },
+pInput:     { border:'1px solid #E2E8F0', borderRadius:'4px', padding:'8px 12px', fontSize:'12px', outline:'none', flex:1, fontFamily:"'DM Sans',sans-serif" },
+pBtn:       { background:'#28a745', color:'#fff', border:'none', borderRadius:'4px', padding:'8px 18px', fontSize:'12px', fontWeight:'600', cursor:'pointer', flexShrink:0, transition:'all 0.2s ease', whiteSpace:'nowrap' },
+pBtnCancel: { background:'#64748B', color:'#fff', border:'none', borderRadius:'4px', padding:'8px 18px', fontSize:'12px', fontWeight:'600', cursor:'pointer', flexShrink:0, transition:'all 0.2s ease' },
+
+  // CONTENT
+  content:    { flex:1, overflowY:'auto', padding:'16px 20px', animation:'fadeIn 0.3s ease' },
+  greeting:   { fontSize:'13px', color:'#475569', marginBottom:'14px', fontWeight:'500' },
+
+  // STATS
+  statGrid:   { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'14px' },
+  statIcon:   { width:'40px', height:'40px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 },
+  statNum:    { fontSize:'20px', fontWeight:'700', color:'#1E293B', lineHeight:1 },
+  statLabel:  { fontSize:'10px', color:'#64748B', marginTop:'2px', fontWeight:'500' },
+  statCard:       { background:'#fff', borderRadius:'10px', padding:'14px', border:'1px solid #E2E8F0', display:'flex', alignItems:'center', gap:'10px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', transition:'box-shadow 0.2s ease, transform 0.2s ease', cursor:'pointer' },
+
+  // THREE COL
+  threeCol:   { display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', marginBottom:'12px' },
+  card:       { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflow:'hidden', marginBottom:'12px', transition:'all 0.2s ease' },
+  cardHead:   { padding:'12px 14px 10px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' },
+  cardTitle:  { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
+  viewAll:    { fontSize:'10px', color:'#2563EB', fontWeight:'600', cursor:'pointer', transition:'all 0.2s ease' },
+  empty:      { padding:'16px', fontSize:'11px', color:'#94A3B8', textAlign:'center' },
+
+  // SCHEDULE
+  schItem:        { display:'flex', alignItems:'flex-start', gap:'8px', padding:'10px 16px', borderBottom:'1px solid #F8FAFC', transition:'background 0.2s ease', cursor:'pointer' }, 
+  schTime:    { fontSize:'10px', color:'#94A3B8', width:'34px', flexShrink:0, fontFamily:'monospace', marginTop:'2px' },
+  dot:        { width:'7px', height:'7px', borderRadius:'50%', flexShrink:0, marginTop:'4px' },
+  schTitle:   { fontSize:'11px', fontWeight:'600', color:'#1E293B', marginBottom:'3px' },
+  tag:        { fontSize:'8px', fontWeight:'600', padding:'2px 7px', borderRadius:'10px' },
+
+  // REQUESTS
+  reqItem:    { display:'flex', alignItems:'center', gap:'8px', padding:'8px 14px', borderBottom:'1px solid #F8FAFC', transition:'all 0.2s ease' },
+  reqId:      { fontSize:'9px', color:'#94A3B8', marginBottom:'2px' },
+  reqName:    { fontSize:'11px', fontWeight:'600', color:'#1E293B', marginBottom:'3px' },
+  approveBtn: { background:'#DCFCE7', color:'#166534', border:'1px solid #BBF7D0', borderRadius:'5px', padding:'4px 8px', fontSize:'12px', fontWeight:'700', cursor:'pointer', transition:'all 0.2s ease' },
+  rejectBtn:  { background:'#FEE2E2', color:'#991B1B', border:'1px solid #FECACA', borderRadius:'5px', padding:'4px 8px', fontSize:'12px', fontWeight:'700', cursor:'pointer', transition:'all 0.2s ease' },
+
+  // ALERTS
+  alertItem:  { display:'flex', alignItems:'flex-start', gap:'8px', padding:'8px 10px', borderRadius:'8px', margin:'6px 10px', transition:'all 0.2s ease' },
+  alertTitle: { fontSize:'11px', fontWeight:'700', color:'#1E293B', marginBottom:'2px' },
+  alertBody:  { fontSize:'9px', color:'#64748B', lineHeight:1.4 },
+
+  // TASKS
+  taskGrid:   { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', padding:'12px 14px' },
+  taskCard:   { borderRadius:'8px', padding:'14px', textAlign:'center', transition:'all 0.2s ease', cursor:'pointer' },
+  taskNum:    { fontSize:'26px', fontWeight:'700', lineHeight:1, marginBottom:'4px' },
+  taskLabel:  { fontSize:'11px', color:'#64748B', fontWeight:'500' },
+
+  // BUTTONS - matching auth pages
+btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer', transition:'all 0.2s ease', whiteSpace:'nowrap' },
+btnOutlineHover:{ background:'#1A3A6B', color:'#fff' },
+btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer', transition:'all 0.2s ease', whiteSpace:'nowrap' },
+btnLogoutHover: { background:'#B91C1C' },
+
+  navIcon: { fontSize:'14px', marginRight:'8px', flexShrink:0 },
+  navItem: { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
 };
 
 export default SecretaryDashboard;

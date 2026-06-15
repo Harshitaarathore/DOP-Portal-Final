@@ -11,7 +11,16 @@ const createEvent = (req, res) => {
 
   db.query(conflictSql, [end_time, start_time], (err, conflicts) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    if (conflicts.length > 0) return res.json({ success: false, message: 'Time conflict with existing event', data: null });
+    if (conflicts.length > 0) {
+  const conflict = conflicts[0];
+  const conflictStart = new Date(conflict.start_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  const conflictEnd = new Date(conflict.end_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  return res.json({ 
+    success: false, 
+    message: `Time conflict with "${conflict.title}" (${conflictStart} – ${conflictEnd})`, 
+    data: null 
+  });
+}
 
     const sql = `INSERT INTO events (id, title, description, start_time, end_time, type, visibility, created_by, notes, participants) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 

@@ -1,134 +1,125 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API from '../api';
+import lnmiitLogo from '../assets/lnmiit-logo.png';
 
 function Notifications() {
   const navigate = useNavigate();
-  const role = localStorage.getItem('role');
-  const [notifications, setNotifications] = useState([
-    { id:1, type:'request',  title:'New Meeting Request',       body:'Dr. Sharma submitted a meeting request',     time:'2 hours ago',  read:false, icon:'📋' },
-    { id:2, type:'approval', title:'Request Approved',          body:'Your leave request has been approved',        time:'4 hours ago',  read:false, icon:'✅' },
-    { id:3, type:'visitor',  title:'Visitor Appointment',       body:'Mr. Rajesh Gupta visit approved for today',   time:'Yesterday',    read:false, icon:'👥' },
-    { id:4, type:'task',     title:'Task Assigned',             body:'Prepare Director weekly brief by today',      time:'Yesterday',    read:true,  icon:'✅' },
-    { id:5, type:'alert',    title:'NAAC Deadline Tomorrow',    body:'Submit compliance report by 5 PM tomorrow',   time:'2 days ago',   read:true,  icon:'⚠️' },
-    { id:6, type:'request',  title:'Request Rejected',          body:'Prof. Mehta leave request was rejected',      time:'2 days ago',   read:true,  icon:'❌' },
-    { id:7, type:'visitor',  title:'New Visitor Request',       body:'Dr. Anil Sharma from IIT Delhi requesting visit', time:'3 days ago', read:true, icon:'👥' },
-  ]);
+  const name = localStorage.getItem('name') || 'User';
+  const role = localStorage.getItem('role') || '';
+  const email = localStorage.getItem('email') || '';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const [notifications, setNotifications] = useState([]);
 
-  const goHome = () => {
-    if (role === 'Director')       navigate('/director-dashboard');
-    else if (role === 'Secretary') navigate('/dashboard');
-    else if (role === 'Faculty')   navigate('/faculty-dashboard');
-    else navigate('/');
+  const dashPath = role === 'Director' ? '/director-dashboard' : role === 'Staff' ? '/staff-portal' : '/dashboard';
+
+  useEffect(() => { fetchNotifications(); }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await API.get('/user/notifications');
+      if (res.data.success) setNotifications(res.data.data);
+    } catch (err) { console.log(err); }
   };
 
-  const markRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? {...n, read:true} : n));
+  const markAllRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read_status: 1 })));
+    try {
+      await API.put('/user/notifications/read-all');
+      fetchNotifications();
+    } catch (err) { console.log(err); }
   };
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({...n, read:true})));
+  const markRead = async (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_status: 1 } : n));
+    try {
+      await API.put(`/user/notifications/${id}/read`);
+      fetchNotifications();
+    } catch (err) { console.log(err); }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const typeBg    = { request:'#EFF6FF', approval:'#DCFCE7', visitor:'#EDE9FE', task:'#DCFCE7', alert:'#FFFBEB' };
-  const typeColor = { request:'#1E40AF', approval:'#166534', visitor:'#5B21B6', task:'#166534', alert:'#92400E' };
+  const unreadCount = notifications.filter(n => n.read_status === 0).length;
 
   return (
-    <div style={styles.page}>
-
+    <div style={S.page}>
       {/* TOPBAR */}
-      <div style={styles.topbar}>
-        <div style={styles.topbarLeft}>
-          <div style={styles.logoRow}>
-            <div style={{...styles.badge, background:'#2563EB'}}>D</div>
-            <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
-          </div>
+      <div style={S.topbar}>
+        <div style={S.topbarUser}>
+          <div style={S.topbarAvatar}>{initials}</div>
           <div>
-            <div style={styles.topbarTitle}>DOP Portal — LNMIIT</div>
-            <div style={styles.topbarSub}>Notifications</div>
+            <div style={S.topbarUserName}>{name}</div>
+            <div style={S.topbarUserEmail}>{email}</div>
+            <div style={S.topbarUserRole}>{role}</div>
           </div>
         </div>
-        <div style={styles.topbarRight}>
-          <button style={styles.backBtn} onClick={goHome}>← Back to Dashboard</button>
-          <div style={styles.rolePill}>👤 {role} ▾</div>
+        <div style={S.topbarRight}>
+          <button style={S.btnBack} onClick={() => navigate(dashPath)}>← Back to Dashboard</button>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div style={styles.content}>
-
-        {/* HEADER */}
-        <div style={styles.pageHeader}>
+      <div style={S.content}>
+        <div style={S.header}>
           <div>
-            <div style={styles.pageTitle}>
-              🔔 Notifications
-              {unreadCount > 0 && (
-                <span style={styles.unreadBadge}>{unreadCount} new</span>
-              )}
+            <div style={S.pageTitle}>🔔 Notifications</div>
+            <div style={S.pageSub}>
+              {unreadCount > 0 ? <span style={S.badge}>{unreadCount} new</span> : null}
+              All your notifications in one place
             </div>
-            <div style={styles.pageSub}>All your notifications in one place</div>
           </div>
           {unreadCount > 0 && (
-            <button style={styles.markAllBtn} onClick={markAllRead}>
-              ✓ Mark all as read
-            </button>
+            <button style={S.markAllBtn} onClick={markAllRead}>✓ Mark all as read</button>
           )}
         </div>
 
-        {/* NOTIFICATIONS LIST */}
-        <div style={styles.listWrap}>
-          {notifications.map(notif => (
-            <div
-              key={notif.id}
-              style={{...styles.notifCard, ...(notif.read ? styles.notifRead : styles.notifUnread)}}
-              onClick={() => markRead(notif.id)}
+        <div style={S.list}>
+          {notifications.length === 0 ? (
+            <div style={S.empty}>No notifications yet</div>
+          ) : notifications.map((n, i) => (
+            <div key={i}
+              style={{ ...S.notifItem, ...(n.read_status === 0 ? S.notifUnread : {}) }}
+              onClick={() => markRead(n.id)}
             >
-              <div style={{...styles.notifIcon, background:typeBg[notif.type], color:typeColor[notif.type]}}>
-                {notif.icon}
+              <div style={S.notifIcon}>
+                {n.type === 'meeting' ? '📋' : n.type === 'task' ? '✅' : n.type === 'visitor' ? '👥' : '🔔'}
               </div>
-              <div style={styles.notifBody}>
-                <div style={styles.notifTitle}>{notif.title}</div>
-                <div style={styles.notifText}>{notif.body}</div>
-                <div style={styles.notifTime}>{notif.time}</div>
+              <div style={{ flex: 1 }}>
+                <div style={S.notifTitle}>{n.message}</div>
+                <div style={S.notifTime}>{new Date(n.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })} · {new Date(n.created_at).toLocaleTimeString('en-IN', { timeStyle: 'short' })}</div>
               </div>
-              {!notif.read && <div style={styles.unreadDot}></div>}
+              {n.read_status === 0 && <div style={S.unreadDot} />}
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
 }
 
-const styles = {
-  page:         { minHeight:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F0F4FA' },
-  topbar:       { background:'#1A3A6B', padding:'12px 28px', display:'flex', alignItems:'center', justifyContent:'space-between' },
-  topbarLeft:   { display:'flex', alignItems:'center', gap:'12px' },
-  logoRow:      { display:'flex', gap:'6px' },
-  badge:        { width:'26px', height:'26px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:'700', fontSize:'11px' },
-  topbarTitle:  { color:'#fff', fontSize:'14px', fontWeight:'700' },
-  topbarSub:    { color:'rgba(255,255,255,0.5)', fontSize:'10px' },
-  topbarRight:  { display:'flex', alignItems:'center', gap:'10px' },
-  backBtn:      { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'8px', padding:'6px 14px', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' },
-  rolePill:     { background:'rgba(37,99,235,0.3)', border:'1px solid rgba(37,99,235,0.5)', borderRadius:'20px', padding:'5px 12px', fontSize:'11px', color:'#fff', fontWeight:'600' },
-  content:      { maxWidth:'700px', margin:'0 auto', padding:'24px 20px' },
-  pageHeader:   { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' },
-  pageTitle:    { fontSize:'18px', fontWeight:'700', color:'#1E293B', display:'flex', alignItems:'center', gap:'10px' },
-  unreadBadge:  { background:'#EF4444', color:'#fff', fontSize:'10px', fontWeight:'700', padding:'3px 8px', borderRadius:'10px' },
-  pageSub:      { fontSize:'11px', color:'#64748B', marginTop:'3px' },
-  markAllBtn:   { background:'#EFF6FF', color:'#1A3A6B', border:'1px solid #BFDBFE', borderRadius:'8px', padding:'8px 16px', fontSize:'11px', fontWeight:'600', cursor:'pointer' },
-  listWrap:     { display:'flex', flexDirection:'column', gap:'8px' },
-  notifCard:    { display:'flex', alignItems:'flex-start', gap:'12px', padding:'14px 16px', borderRadius:'12px', cursor:'pointer', border:'1px solid #E2E8F0' },
-  notifUnread:  { background:'#fff', borderLeft:'4px solid #2563EB', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
-  notifRead:    { background:'#F8FAFC', borderLeft:'4px solid transparent' },
-  notifIcon:    { width:'40px', height:'40px', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 },
-  notifBody:    { flex:1 },
-  notifTitle:   { fontSize:'13px', fontWeight:'700', color:'#1E293B', marginBottom:'3px' },
-  notifText:    { fontSize:'11px', color:'#475569', lineHeight:1.5, marginBottom:'5px' },
-  notifTime:    { fontSize:'10px', color:'#94A3B8' },
-  unreadDot:    { width:'10px', height:'10px', borderRadius:'50%', background:'#2563EB', flexShrink:0, marginTop:'4px' },
+const S = {
+  page:          { minHeight:'100vh', background:'#F5F7FA', fontFamily:"'DM Sans',sans-serif" },
+  topbar:        { background:'#fff', padding:'10px 32px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)', position:'sticky', top:0, zIndex:10 },
+  topbarUser:    { display:'flex', alignItems:'center', gap:'10px' },
+  topbarAvatar:  { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff' },
+  topbarUserName:{ color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
+  topbarUserEmail:{ color:'#94A3B8', fontSize:'9px' },
+  topbarUserRole:{ color:'#64748B', fontSize:'10px' },
+  topbarRight:   { display:'flex', gap:'8px' },
+  btnBack:       { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
+  content:       { maxWidth:'720px', margin:'0 auto', padding:'28px 20px' },
+  header:        { display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'20px' },
+  pageTitle:     { fontSize:'18px', fontWeight:'700', color:'#1E293B', marginBottom:'4px' },
+  pageSub:       { fontSize:'12px', color:'#64748B', display:'flex', alignItems:'center', gap:'8px' },
+  badge:         { background:'#EF4444', color:'#fff', borderRadius:'20px', padding:'2px 8px', fontSize:'10px', fontWeight:'700' },
+  markAllBtn:    { background:'transparent', color:'#2563EB', border:'1px solid #2563EB', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap' },
+  list:          { display:'flex', flexDirection:'column', gap:'8px' },
+  notifItem:     { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', padding:'14px 16px', display:'flex', alignItems:'center', gap:'12px', cursor:'pointer', transition:'all 0.2s ease' },
+  notifUnread:   { borderLeft:'3px solid #2563EB', background:'#F8FAFF' },
+  notifIcon:     { width:'36px', height:'36px', borderRadius:'8px', background:'#F1F5F9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 },
+  notifTitle:    { fontSize:'13px', fontWeight:'600', color:'#1E293B', marginBottom:'4px' },
+  notifTime:     { fontSize:'10px', color:'#94A3B8' },
+  unreadDot:     { width:'8px', height:'8px', borderRadius:'50%', background:'#2563EB', flexShrink:0 },
+  empty:         { textAlign:'center', padding:'40px', color:'#94A3B8', fontSize:'13px' },
 };
 
 export default Notifications;
