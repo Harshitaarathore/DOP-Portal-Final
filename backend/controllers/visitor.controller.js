@@ -14,6 +14,10 @@ const logAudit = (user_id, action, module) => {
 const submitVisitor = (req, res) => {
   const { name, email, organization, purpose, visit_date, visit_time } = req.body;
 
+  if (!name || !purpose || !visit_date || !visit_time) {
+    return res.json({ success: false, message: 'Name, purpose, date and time are required', data: null });
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const visitD = new Date(visit_date);
@@ -21,12 +25,24 @@ const submitVisitor = (req, res) => {
     return res.json({ success: false, message: 'Visit date cannot be in the past', data: null });
   }
 
-  const id = uuidv4();
-  const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-
-db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00'], (err) => {
+  // Check time clash
+  const clashSql = `SELECT * FROM visitors WHERE visit_date = ? AND visit_time = ? AND approval_status != 'Rejected'`;
+  db.query(clashSql, [visit_date, visit_time], (err, clashes) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    res.json({ success: true, message: 'Visitor request submitted', data: null });
+    if (clashes.length > 0) {
+      return res.json({ 
+        success: false, 
+        message: `Time slot ${visit_time} on this date is already booked by "${clashes[0].name}". Please choose a different time.`, 
+        data: null 
+      });
+    }
+
+    const id = uuidv4();
+    const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00'], (err2) => {
+      if (err2) return res.json({ success: false, message: err2.message, data: null });
+      res.json({ success: true, message: 'Visitor request submitted', data: null });
+    });
   });
 };
 
@@ -44,69 +60,78 @@ const getTodayVisitors = (req, res) => {
 const approveVisitor = async (req, res) => {
   const { id } = req.params;
 
-  const updateSql = `UPDATE visitors SET approval_status = 'Approved', pass_generated = 1 WHERE id = ?`;
-
-  db.query(updateSql, [id], async (err) => {
+  // Get visitor details first
+  db.query(`SELECT * FROM visitors WHERE id = ?`, [id], async (err, rows) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    logAudit(req.user.id, 'APPROVED visitor', 'Visitors');
+    if (!rows.length) return res.json({ success: false, message: 'Visitor not found', data: null });
 
-    const getSql = `SELECT * FROM visitors WHERE id = ?`;
+    const visitor = rows[0];
 
-    db.query(getSql, [id], async (err2, results) => {
-      if (err2 || results.length === 0) return res.json({ success: true, message: 'Visitor approved', data: null });
+    // Check if another visitor already approved for same date+time
+    const clashSql = `SELECT * FROM visitors WHERE visit_date = ? AND visit_time = ? AND approval_status = 'Approved' AND id != ?`;
+    db.query(clashSql, [visitor.visit_date, visitor.visit_time, id], async (err2, clashes) => {
+      if (err2) return res.json({ success: false, message: err2.message, data: null });
+      if (clashes.length > 0) {
+        return res.json({ 
+          success: false, 
+          message: `Cannot approve — "${clashes[0].name}" is already approved for this time slot`, 
+          data: null 
+        });
+      }
 
-      const visitor = results[0];
-      const eventId = uuidv4();
+      // No clash — proceed with approval
+      const updateSql = `UPDATE visitors SET approval_status = 'Approved', pass_generated = 1 WHERE id = ?`;
+      db.query(updateSql, [id], async (err3) => {
+        if (err3) return res.json({ success: false, message: err3.message, data: null });
+        logAudit(req.user.id, 'APPROVED visitor', 'Visitors');
 
-      const rawDate = new Date(visitor.visit_date);
-      rawDate.setDate(rawDate.getDate() + 1);
-      const dateStr = rawDate.toISOString().split('T')[0];
+        const rawDate = new Date(visitor.visit_date);
+        rawDate.setDate(rawDate.getDate() + 1);
+        const dateStr = rawDate.toISOString().split('T')[0];
 
-      // Convert 12hr to 24hr format
-      const convertTo24Hr = (time12) => {
-        if (!time12) return '10:00';
-        if (!time12.includes('AM') && !time12.includes('PM')) return time12;
-        const [time, modifier] = time12.split(' ');
+        const convertTo24Hr = (time12) => {
+          if (!time12) return '10:00';
+          if (!time12.includes('AM') && !time12.includes('PM')) return time12;
+          const [time, modifier] = time12.split(' ');
           let [hours, minutes] = time.split(':');
           if (modifier === 'PM' && hours !== '12') hours = String(parseInt(hours) + 12);
           if (modifier === 'AM' && hours === '12') hours = '00';
           return `${hours.padStart(2,'0')}:${minutes}`;
-      };
-      const visitTime = convertTo24Hr(visitor.visit_time);
-      const endHour = String(parseInt(visitTime.split(':')[0]) + 1).padStart(2, '0');
-      const endMin = visitTime.split(':')[1];
-      const startTime = `${dateStr} ${visitTime}:00`;
-      const endTime = `${dateStr} ${endHour}:${endMin}:00`;
+        };
 
-      const eventSql = `INSERT INTO events (id, title, description, start_time, end_time, type, visibility, created_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const visitTime = convertTo24Hr(visitor.visit_time);
+        const endHour = String(parseInt(visitTime.split(':')[0]) + 1).padStart(2, '0');
+        const endMin = visitTime.split(':')[1];
+        const startTime = `${dateStr} ${visitTime}:00`;
+        const endTime = `${dateStr} ${endHour}:${endMin}:00`;
 
-      db.query(eventSql, [
-        eventId,
-        `Visitor: ${visitor.name}`,
-        `Visit from ${visitor.organization} — ${visitor.purpose}`,
-        startTime,
-        endTime,
-        'Public',
-        'public',
-        req.user.id,
-        `Organization: ${visitor.organization}`
-      ], async (err3) => {
-        if (err3) console.log('Event creation failed:', err3.message);
+        const eventId = uuidv4();
+        const eventSql = `INSERT INTO events (id, title, description, start_time, end_time, type, visibility, created_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        db.query(eventSql, [
+          eventId,
+          `Visitor: ${visitor.name}`,
+          `Visit from ${visitor.organization} — ${visitor.purpose}`,
+          startTime, endTime, 'Public', 'public', req.user.id,
+          `Organization: ${visitor.organization}`
+        ], async (err4) => {
+          if (err4) console.log('Event creation failed:', err4.message);
 
-        // Send approval email
-        if (visitor.email) {
-          try {
-            await sendVisitorApprovedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, visitor.visit_time);
-          } catch (emailErr) {
-            console.log('Visitor approval email failed:', emailErr.message);
+          if (visitor.email) {
+            try {
+              await sendVisitorApprovedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, visitor.visit_time);
+            } catch (emailErr) {
+              console.log('Visitor approval email failed:', emailErr.message);
+            }
           }
-        }
 
-        res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
+          res.json({ success: true, message: 'Visitor approved and calendar event created', data: null });
+        });
       });
     });
   });
 };
+
+
 // REJECT VISITOR (Secretary)
 const rejectVisitor = (req, res) => {
   const { id } = req.params;
