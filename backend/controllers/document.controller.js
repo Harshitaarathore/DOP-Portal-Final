@@ -34,16 +34,29 @@ const logAudit = (user_id, action, module) => {
 const uploadDocument = (req, res) => {
   const { title, category, access_level, version } = req.body;
   const uploaded_by = req.user.id;
-
-  // Cloudinary gives us a secure URL, not a filename
   const file_path = req.file ? req.file.path : null;
   const id = uuidv4();
+  const initialVersion = version || '1.0';
 
-  const sql = `INSERT INTO documents (id, title, category, file_path, uploaded_by, access_level, version) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [id, title, category, file_path, uploaded_by, access_level, version || '1.0'], (err) => {
+  // Check for duplicate title first
+  db.query(`SELECT id FROM documents WHERE title = ?`, [title], (err, existing) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    logAudit(req.user.id, 'UPLOADED document: ' + title, 'Documents');
-    res.json({ success: true, message: 'Document uploaded', data: null });
+    if (existing.length > 0) {
+      return res.json({ success: false, message: `A document named "${title}" already exists. Use "New Version" to update it.`, data: null });
+    }
+
+    const sql = `INSERT INTO documents (id, title, category, file_path, uploaded_by, access_level, version) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [id, title, category, file_path, uploaded_by, access_level, initialVersion], (err) => {
+      if (err) return res.json({ success: false, message: err.message, data: null });
+
+      const versionSql = `INSERT INTO document_versions (id, document_id, version, file_path, uploaded_by, notes) VALUES (?, ?, ?, ?, ?, ?)`;
+      db.query(versionSql, [uuidv4(), id, initialVersion, file_path, uploaded_by, 'Initial upload'], (err2) => {
+        if (err2) console.log('Version history insert error:', err2.message);
+      });
+
+      logAudit(req.user.id, 'UPLOADED document: ' + title, 'Documents');
+      res.json({ success: true, message: 'Document uploaded successfully', data: null });
+    });
   });
 };
 
