@@ -14,11 +14,17 @@ cloudinary.config({
 // Multer now stores to Cloudinary instead of local disk
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
-    folder: 'dop-portal/documents',
-    resource_type: 'raw',          // handles PDF, DOCX, XLSX etc
-    public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`,
-  }),
+  params: async (req, file) => {
+    const ext = file.originalname.split('.').pop().toLowerCase();
+    const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
+    return {
+      folder: 'dop-portal/documents',
+      resource_type: isImage ? 'image' : 'raw',
+      public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`,
+      // For raw files, force download=false so browser opens them inline
+      flags: isImage ? undefined : 'attachment:false',
+    };
+  },
 });
 
 const upload = multer({ storage });
@@ -76,10 +82,16 @@ const getDocuments = (req, res) => {
 // DELETE DOCUMENT
 const deleteDocument = (req, res) => {
   const { id } = req.params;
-  db.query(`DELETE FROM documents WHERE id = ?`, [id], (err) => {
+
+  // Delete versions first to avoid foreign key constraint issues
+  db.query(`DELETE FROM document_versions WHERE document_id = ?`, [id], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    logAudit(req.user.id, 'DELETED document', 'Documents');
-    res.json({ success: true, message: 'Document deleted', data: null });
+
+    db.query(`DELETE FROM documents WHERE id = ?`, [id], (err2) => {
+      if (err2) return res.json({ success: false, message: err2.message, data: null });
+      logAudit(req.user.id, 'DELETED document', 'Documents');
+      res.json({ success: true, message: 'Document deleted', data: null });
+    });
   });
 };
 

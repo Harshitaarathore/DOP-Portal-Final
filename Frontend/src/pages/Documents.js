@@ -71,12 +71,20 @@ function Documents() {
 };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this document?')) return;
-    try {
-      const res = await API.delete(`/documents/${id}`);
-      if (res.data.success) fetchDocuments();
-    } catch { alert('Failed to delete document'); }
-  };
+  if (!window.confirm('Delete this document and all its versions?')) return;
+  try {
+    const res = await API.delete(`/documents/${id}`);
+    if (res.data.success) {
+      fetchDocuments();
+      setShowVersions(false);
+      showToast('Document deleted successfully ✓');
+    } else {
+      showToast(res.data.message || 'Failed to delete', 'error');
+    }
+  } catch {
+    showToast('Failed to delete document', 'error');
+  }
+};
 
   const fetchVersions = async (docId) => {
     try {
@@ -154,6 +162,16 @@ function Documents() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // Converts Cloudinary raw URL to a viewable URL using Google Docs viewer
+const getViewUrl = (filePath) => {
+  if (!filePath) return '#';
+  // Use Google Docs viewer for PDFs — works perfectly for any public URL
+  if (filePath.includes('.pdf') || filePath.toLowerCase().endsWith('pdf')) {
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(filePath)}&embedded=true`;
+  }
+  return filePath;
+};
 
   return (
     <div style={S.page}>
@@ -315,7 +333,7 @@ function Documents() {
                 </div>
                 <div style={{ ...S.td, flex:1.6, gap:'6px' }}>
                   {doc.file_path && (
-                    <a href={doc.file_path} target="_blank" rel="noreferrer">
+                    <a href={getViewUrl(doc.file_path)} target="_blank" rel="noreferrer">
                       <button style={S.viewBtn}>View</button>
                     </a>
                   )}
@@ -380,7 +398,7 @@ function Documents() {
                     </div>
                     <div style={{ ...S.td, flex:0.8 }}>
                       {v.file_path ? (
-                        <a href={v.file_path} target="_blank" rel="noreferrer">
+                        <a href={getViewUrl(v.file_path)} target="_blank" rel="noreferrer">
                           <button style={S.viewBtn}>View</button>
                         </a>
                       ) : (
