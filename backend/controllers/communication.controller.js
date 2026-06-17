@@ -29,6 +29,21 @@ const createCommunication = (req, res) => {
 
   db.query(sql, [id, type, sender, subject, content, assigned_to, tagged_as || '', direction || 'inward'], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
+
+    // Notify Director and Secretary
+    const notifSql = `SELECT id FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`;
+    db.query(notifSql, (err2, users) => {
+      if (!err2 && users.length > 0) {
+        users.forEach(u => {
+          db.query(
+            `INSERT INTO notifications (id, user_id, message, type, read_status) VALUES (?, ?, ?, ?, ?)`,
+            [uuidv4(), u.id, `📬 New ${direction || 'inward'} ${type}: "${subject}" from ${sender}`, 'communication', 0],
+            (err3) => { if (err3) console.log('Comm notif error:', err3.message); }
+          );
+        });
+      }
+    });
+
     res.json({ success: true, message: 'Communication logged', data: null });
   });
 };

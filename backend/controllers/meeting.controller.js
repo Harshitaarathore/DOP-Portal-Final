@@ -30,6 +30,19 @@ const submitRequest = (req, res) => {
 
   db.query(sql, [id, requester_id, purpose, priority, preferred_date, preferred_time, requester_name || '', department || '', attachment], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
+    
+    // Send notification to Secretary and Director
+    const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+    db.query(`SELECT id, role FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`, (err2, users) => {
+      if (!err2 && users && users.length > 0) {
+        users.forEach(u => {
+          const reqDate = new Date(preferred_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+          db.query(notifSql, [uuidv4(), u.id, `📅 New Meeting Request: "${purpose}" on ${reqDate} (Priority: ${priority})`, 'meeting_request']);
+        });
+      }
+    });
+    
+    logAudit(requester_id, 'SUBMITTED meeting request', 'Meetings');
     res.json({ success: true, message: 'Meeting request submitted', data: null });
   });
 };

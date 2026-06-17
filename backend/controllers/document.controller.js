@@ -60,6 +60,16 @@ const uploadDocument = (req, res) => {
         if (err2) console.log('Version history insert error:', err2.message);
       });
 
+      // Send notification to all active users
+      const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+      db.query(`SELECT id FROM users WHERE status = 'active'`, (err3, users) => {
+        if (!err3 && users && users.length > 0) {
+          users.forEach(u => {
+            db.query(notifSql, [uuidv4(), u.id, `📄 New Document: "${title}" (${category}) uploaded`, 'document_uploaded']);
+          });
+        }
+      });
+
       logAudit(req.user.id, 'UPLOADED document: ' + title, 'Documents');
       res.json({ success: true, message: 'Document uploaded successfully', data: null });
     });

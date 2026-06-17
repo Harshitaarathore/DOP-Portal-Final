@@ -41,6 +41,18 @@ const submitVisitor = (req, res) => {
     const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00'], (err2) => {
       if (err2) return res.json({ success: false, message: err2.message, data: null });
+      
+      // Send notification to Secretary and Director
+      const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+      db.query(`SELECT id FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`, (err3, users) => {
+        if (!err3 && users && users.length > 0) {
+          const visitDateStr = new Date(visit_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+          users.forEach(u => {
+            db.query(notifSql, [uuidv4(), u.id, `👤 New Visitor Request: "${name}" from ${organization} on ${visitDateStr}`, 'visitor_added']);
+          });
+        }
+      });
+      
       res.json({ success: true, message: 'Visitor request submitted', data: null });
     });
   });
@@ -85,6 +97,17 @@ const approveVisitor = async (req, res) => {
         if (err3) return res.json({ success: false, message: err3.message, data: null });
         logAudit(req.user.id, 'APPROVED visitor', 'Visitors');
 
+        // Send notification to all active users when pass is generated
+        const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+        db.query(`SELECT id FROM users WHERE status = 'active'`, (err4, users) => {
+          if (!err4 && users && users.length > 0) {
+            const visitDateStr = new Date(visitor.visit_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+            users.forEach(u => {
+              db.query(notifSql, [uuidv4(), u.id, `🎫 Visitor Pass Generated: "${visitor.name}" from ${visitor.organization} on ${visitDateStr}`, 'visitor_pass_generated']);
+            });
+          }
+        });
+
         const rawDate = new Date(visitor.visit_date);
         rawDate.setDate(rawDate.getDate() + 1);
         const dateStr = rawDate.toISOString().split('T')[0];
@@ -113,8 +136,8 @@ const approveVisitor = async (req, res) => {
           `Visit from ${visitor.organization} — ${visitor.purpose}`,
           startTime, endTime, 'Public', 'public', req.user.id,
           `Organization: ${visitor.organization}`
-        ], async (err4) => {
-          if (err4) console.log('Event creation failed:', err4.message);
+        ], async (err5) => {
+          if (err5) console.log('Event creation failed:', err5.message);
 
           if (visitor.email) {
             try {
