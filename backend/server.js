@@ -12,9 +12,11 @@ const documentRoutes = require('./routes/document.routes');
 const reportRoutes = require('./routes/report.routes');
 const adminRoutes = require('./routes/admin.routes');
 const communicationRoutes = require('./routes/communication.routes');
+const announcementRoutes = require('./routes/announcement.routes');
 const { verifyToken } = require('./middleware/auth.middleware');
 const { allowRoles } = require('./middleware/role.middleware');
 const { startScheduler } = require('./utils/scheduler');
+
 
 const app = express();
 
@@ -36,6 +38,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/reports', reportRoutes);
 app.use('/admin', adminRoutes);
 app.use('/communications', communicationRoutes);
+app.use('/announcements', announcementRoutes);
 
 app.get('/test-auth', verifyToken, (req, res) => {
   res.json({ success: true, message: `Hello ${req.user.role}`, data: null });

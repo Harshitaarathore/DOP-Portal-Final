@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
+import { useNotifCount } from '../hooks/useNotifCount';
 
 // Add animation styles
 const animationStyles = `
@@ -68,6 +69,7 @@ function SecretaryDashboard() {
   const [hoveredBtnId, setHoveredBtnId] = useState(null);
   const [eventError, setEventError] = useState('');
   const [announcements, setAnnouncements] = useState([]);
+  const { count: notifCount } = useNotifCount();
 
   const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
@@ -230,9 +232,9 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
   </div>
   <div style={S.topbarRight}>
     <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
-      🔔
-      {notifications.length > 0 && <span style={S.notifBadge}>{notifications.length}</span>}
-    </div>
+  🔔
+  {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
+</div>
     <button
       style={{ ...S.btnOutline, ...(hoveredBtn === 'quickadd' ? S.btnOutlineHover : {}) }}
       onMouseEnter={() => setHoveredBtn('quickadd')}
@@ -562,8 +564,8 @@ topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight
 topbarUserEmail:{ color:'#94A3B8', fontSize:'9px', marginTop:'1px' },
 topbarUserRole: { color:'#64748B', fontSize:'10px', marginTop:'1px' },
 topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
-notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer', transition:'all 0.2s ease' },
-notifBadge:     { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+notifBadge: { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+notifWrap:  { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
 
   // PANEL
   panel:      { background:'#fff', borderBottom:'1px solid #E2E8F0', padding:'12px 22px', display:'flex', alignItems:'center', gap:'16px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
@@ -628,5 +630,7 @@ btnLogoutHover: { background:'#B91C1C' },
   navIcon: { fontSize:'14px', marginRight:'8px', flexShrink:0 },
   navItem: { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
 };
+
+  
 
 export default SecretaryDashboard;

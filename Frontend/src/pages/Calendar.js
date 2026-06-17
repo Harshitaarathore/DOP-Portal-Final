@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
+import { useNotifCount } from '../hooks/useNotifCount';
 
 function Calendar() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ function Calendar() {
   const [newEvent, setNewEvent] = useState({ title: '', description: '', start_time: '', end_time: '', type: 'Public', visibility: 'public', notes: '' });
   const [addError, setAddError] = useState('');
   const [hoveredNav, setHoveredNav] = useState(null);
+  const { count: notifCount } = useNotifCount();
 
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
@@ -199,7 +201,9 @@ const upcomingTasks = tasks
             </div>
           </div>
           <div style={S.topbarRight}>
-            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔</div>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
+  {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
+</div>
             {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
             <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
@@ -554,7 +558,8 @@ const S = {
   topbarUserEmail:{ color:'#94A3B8', fontSize:'9px' },
   topbarUserRole: { color:'#64748B', fontSize:'10px' },
   topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
-  notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
+  notifBadge: { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+notifWrap:  { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
   btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   content:        { flex:1, overflowY:'auto', padding:'16px 20px' },

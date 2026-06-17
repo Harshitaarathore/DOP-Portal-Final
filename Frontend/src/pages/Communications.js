@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
+import { useNotifCount } from '../hooks/useNotifCount';
 
 function Toast({ message, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
@@ -28,6 +29,7 @@ function Communications() {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [newComm, setNewComm] = useState({ type:'email', sender:'', subject:'', content:'', tagged_as:'', direction:'inward' });
   const [formError, setFormError] = useState('');
+  const { count: notifCount } = useNotifCount();
 
   const role  = localStorage.getItem('role');
   const name  = localStorage.getItem('name') || 'User';
@@ -159,7 +161,10 @@ function Communications() {
             </div>
           </div>
           <div style={S.topbarRight}>
-            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔</div>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
+  🔔
+  {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
+</div>
             <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
             <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
@@ -380,6 +385,8 @@ const S = {
   navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
   navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
   navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
+  notifBadge: { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+notifWrap:  { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
   main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
   topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
   topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
