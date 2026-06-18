@@ -47,17 +47,18 @@ function Reports() {
 
   useEffect(() => { fetchReports(); }, []);
 
-  const fetchReports = async () => {
-    setRefreshing(true);
-    try {
-      const res = await API.get('/reports');
-      if (res.data.success) setData(res.data.data);
-    } catch (err) {
-      console.log('Error fetching reports:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchReports = async () => {
+  setRefreshing(true);
+  try {
+    const res = await API.get('/reports');
+    if (res.data.success) setData(res.data.data);
+  } catch (err) {
+    console.log('Error fetching reports:', err);
+  } finally {
+    setLoading(false);
+    setRefreshing(false); // this must always run
+  }
+};
 
   const getCount = (arr, key, value) => arr?.find(i => i[key] === value)?.count || 0;
 
@@ -140,7 +141,12 @@ function Reports() {
               <div style={S.pageTitle}>📊 Reports & Analytics</div>
               <div style={S.pageSub}>Analytics and statistics for Director's Office</div>
             </div>
-            <button style={S.refreshBtn} onClick={fetchReports} disabled={refreshing}> {refreshing ? '↻ Refreshing...' : '↻ Refresh'} </button>
+            <button
+  style={{ ...S.refreshBtn, opacity: refreshing ? 0.7 : 1 }}
+  onClick={() => { if (!refreshing) fetchReports(); }}
+>
+  {refreshing ? '↻ Refreshing...' : '↻ Refresh'}
+</button>
           </div>
 
           {/* TABS */}
