@@ -5,6 +5,8 @@ const { verifyToken } = require('../middleware/auth.middleware');
 const { allowRoles } = require('../middleware/role.middleware');
 const { getAllUsers, addUser, updateUserStatus, updateUserRole, deleteUser } = require('../controllers/user.controller');
 
+router.get('/', verifyToken, getAllUsers);
+
 // NOTIFICATIONS
 router.get('/notifications', verifyToken, (req, res) => {
   const user_id = req.user.id;

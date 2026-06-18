@@ -24,7 +24,7 @@ function Announcements() {
   const canManage = role === 'Director' || role === 'Secretary';
 
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
@@ -33,6 +33,7 @@ function Announcements() {
   const [hoveredNav, setHoveredNav] = useState(null);
   const [form, setForm] = useState({ title:'', content:'', priority:'Medium', category:'General', pinned:false });
   const [formError, setFormError] = useState('');
+
 
   const { count: notifCount } = useNotifCount();
   const showToast = (message, type = 'success') => setToast({ message, type });
@@ -51,48 +52,52 @@ function Announcements() {
   ];
 
   useEffect(() => { fetchAnnouncements(); }, []);
-
+  
   const fetchAnnouncements = async () => {
-    try {
-      const res = await API.get('/announcements');
-      if (res.data.success) setAnnouncements(res.data.data);
-    } catch (err) { console.log(err); }
-    finally { setLoading(false); }
-  };
+  try {
+    const res = await API.get('/announcements');
+    if (res.data.success) setAnnouncements(res.data.data);
+  } catch (err) {
+    console.log('Error fetching announcements:', err);
+  }
+};
 
-  const handleSubmit = async () => {
-    setFormError('');
-    if (!form.title.trim()) { setFormError('Title is required'); return; }
-    if (!form.content.trim()) { setFormError('Content is required'); return; }
-    setSubmitting(true);
-    try {
-      const res = await API.post('/announcements', form);
-      if (res.data.success) {
-        showToast('Announcement published successfully!', 'success');
-        setForm({ title:'', content:'', priority:'Medium', category:'General', pinned:false });
-        setShowForm(false);
-        fetchAnnouncements();
-      } else { setFormError(res.data.message); }
-    } catch { setFormError('Failed to publish announcement'); }
-    finally { setSubmitting(false); }
-  };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this announcement?')) return;
-    try {
-      const res = await API.delete(`/announcements/${id}`);
-      if (res.data.success) { fetchAnnouncements(); showToast('Announcement deleted', 'success'); }
-      else showToast(res.data.message, 'error');
-    } catch { showToast('Failed to delete', 'error'); }
-  };
+const handleSubmit = async () => {
+  if (!form.title || !form.content) return alert('Title and content are required');
+  setLoading(true);
+  try {
+    const res = await API.post('/announcements', form);
+    if (res.data.success) {
+      setForm({ title:'', content:'', priority:'Medium', category:'General', pinned:false });
+      setShowForm(false);
+      fetchAnnouncements(); // re-fetch from DB
+    } else {
+      alert('Error: ' + res.data.message);
+    }
+  } catch (err) {
+    alert('Failed to publish announcement');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handlePin = async (id) => {
-    try {
-      const res = await API.put(`/announcements/${id}/pin`);
-      if (res.data.success) fetchAnnouncements();
-      else showToast(res.data.message, 'error');
-    } catch { showToast('Failed to update pin', 'error'); }
-  };
+// Replace handleDelete:
+const handleDelete = async (id) => {
+  if (!window.confirm('Delete this announcement?')) return;
+  try {
+    const res = await API.delete(`/announcements/${id}`);
+    if (res.data.success) fetchAnnouncements();
+  } catch (err) { alert('Failed to delete'); }
+};
+
+// Replace handlePin:
+const handlePin = async (id) => {
+  try {
+    const res = await API.put(`/announcements/${id}/pin`);
+    if (res.data.success) fetchAnnouncements();
+  } catch (err) { alert('Failed to pin'); }
+};
 
   const categories = ['all','Academic','Meeting','Placement','Research','Holiday','General'];
   const filtered = activeCategory === 'all' ? announcements : announcements.filter(a => a.category === activeCategory);

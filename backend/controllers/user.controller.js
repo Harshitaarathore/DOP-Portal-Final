@@ -4,9 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // GET ALL USERS
 const getAllUsers = (req, res) => {
-  const sql = `SELECT id, name, email, role, department, status FROM users ORDER BY role ASC`;
-
-  db.query(sql, (err, results) => {
+  db.query(`SELECT id, name, role FROM users WHERE status = 'active' ORDER BY role, name`, (err, results) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     res.json({ success: true, message: 'Users fetched', data: results });
   });

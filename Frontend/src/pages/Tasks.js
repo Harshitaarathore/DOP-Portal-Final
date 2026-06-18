@@ -37,18 +37,35 @@ function Tasks() {
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
-  const navItems = [
-    { label:'Dashboard',     icon:'🏠', path:'/dashboard' },
-    { label:'Calendar',      icon:'📅', path:'/calendar' },
-    { label:'Requests',      icon:'📋', path:'/requests' },
-    { label:'Documents',     icon:'📁', path:'/documents' },
-    { label:'Visitors',      icon:'👥', path:'/visitors' },
-    { label:'Communication', icon:'📬', path:'/communications' },
-    { label:'Tasks',         icon:'✅', path:'/tasks' },
-    { label:'Announcements', icon:'📢', path:'/announcements' },
-    { label:'Reports',       icon:'📊', path:'/reports' },
-    { label:'Settings',      icon:'⚙️', path:'/settings' },
-  ];
+const navItems = role === 'Director' ? [
+  {label:'Dashboard',     path:'/director-dashboard'},
+  {label:'Requests',      path:'/director-requests'},
+  {label:'Calendar',      path:'/calendar'},
+  {label:'Announcements', path:'/announcements'},
+  {label:'Documents',     path:'/documents'},
+  {label:'Visitors',      path:'/visitors'},
+  {label:'Tasks',         path:'/tasks'},
+  {label:'Reports',       path:'/reports'},
+  {label:'Settings',      path:'/settings'},
+] : role === 'Faculty' || role === 'Staff' ? [
+  {label:'Dashboard',     path:'/faculty-dashboard'},
+  {label:'My Requests',   path:'/faculty-requests'},
+  {label:'Calendar',      path:'/faculty-calendar'},
+  {label:'Announcements', path:'/announcements'},
+  {label:'My Tasks',      path:'/tasks'},
+  {label:'Settings',      path:'/settings'},
+] : [
+  {label:'Dashboard',     path:'/dashboard'},
+  {label:'Calendar',      path:'/calendar'},
+  {label:'Requests',      path:'/requests'},
+  {label:'Communication', path:'/communication'},
+  {label:'Announcements', path:'/announcements'},
+  {label:'Documents',     path:'/documents'},
+  {label:'Visitors',      path:'/visitors'},
+  {label:'Tasks',         path:'/tasks'},
+  {label:'Reports',       path:'/reports'},
+  {label:'Settings',      path:'/settings'},
+];
 
   useEffect(() => { fetchTasks(); fetchUsers(); }, []);
 
@@ -62,9 +79,9 @@ function Tasks() {
 
   const fetchUsers = async () => {
     try {
-      const res = await API.get('/user/all');
+      const res = await API.get('/user');
       if (res.data.success) setUsers(res.data.data);
-    } catch (err) {}
+    } catch (err) {console.log('Error fetching users:', err);}
   };
 
   const handleDragEnd = async (result) => {
