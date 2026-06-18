@@ -176,7 +176,7 @@ function Communications() {
           {/* PAGE HEADER */}
           <div style={S.pageHeader}>
             <div>
-              <div style={S.pageTitle}>📬 Communication Hub</div>
+              <div style={S.pageTitle}>💬 Communication Hub</div>
               <div style={S.pageSub}>Incoming → Logged → Tagged → Assigned → Closed</div>
             </div>
             <button style={S.addBtn} onClick={() => { setShowAddForm(!showAddForm); setFormError(''); }}>

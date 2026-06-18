@@ -99,10 +99,10 @@ router.delete('/:id', verifyToken, allowRoles('Director'), deleteUser);
 
 // GET notification preferences
 router.get('/notif-prefs', verifyToken, (req, res) => {
-  db.query(`SELECT * FROM user_notif_prefs WHERE user_id = ?`, [req.user.id], (err, rows) => {
+  const user_id = req.user.id;
+  db.query(`SELECT * FROM user_notif_prefs WHERE user_id = ?`, [user_id], (err, rows) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     if (rows.length === 0) {
-      // return defaults
       return res.json({ success: true, data: { emailNotifs:1, meetingReminders:1, taskDeadlines:1, visitorAlerts:1, requestUpdates:0 } });
     }
     res.json({ success: true, data: rows[0] });
@@ -136,7 +136,6 @@ router.put('/notif-prefs', verifyToken, (req, res) => {
     }
   });
 });
-
 
 module.exports = router;
 
