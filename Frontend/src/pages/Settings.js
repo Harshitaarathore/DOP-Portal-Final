@@ -60,7 +60,7 @@ function Settings() {
     { label:'Requests',      icon:'📋', path:'/requests' },
     { label:'Documents',     icon:'📁', path:'/documents' },
     { label:'Visitors',      icon:'👥', path:'/visitors' },
-    { label:'Communication', icon:'📬', path:'/communication' },
+    { label:'Communication', icon:'💬', path:'/communications' },
     { label:'Tasks',         icon:'✅', path:'/tasks' },
     { label:'Announcements', icon:'📢', path:'/announcements' },
     { label:'Reports',       icon:'📊', path:'/reports' },
@@ -84,11 +84,33 @@ function Settings() {
         { key:'security',     label:'Security' },
       ];
 
-  useEffect(() => {
-    if (activeTab === 'users'       && canAdmin)             fetchUsers();
-    if (activeTab === 'departments')                         fetchDepartments();
-    if (activeTab === 'permissions' && role === 'Director')  fetchPermissions();
-  }, [activeTab]);
+useEffect(() => {
+  if (activeTab === 'users'        && canAdmin)  fetchUsers();
+  if (activeTab === 'departments')               fetchDepartments();
+  if (activeTab === 'permissions')               fetchPermissions(); // removed Director-only check
+  if (activeTab === 'notifications')             fetchNotifPrefs();
+}, [activeTab]);
+
+const fetchNotifPrefs = async () => {
+  try {
+    const res = await API.get('/user/notif-prefs');
+    if (res.data.success) setNotifPrefs({
+      emailNotifs:      !!res.data.data.emailNotifs,
+      meetingReminders: !!res.data.data.meetingReminders,
+      taskDeadlines:    !!res.data.data.taskDeadlines,
+      visitorAlerts:    !!res.data.data.visitorAlerts,
+      requestUpdates:   !!res.data.data.requestUpdates,
+    });
+  } catch (err) { console.log(err); }
+};
+
+const handleSaveNotifPrefs = async () => {
+  try {
+    const res = await API.put('/user/notif-prefs', notifPrefs);
+    if (res.data.success) showToast('Notification preferences saved!');
+    else showToast(res.data.message, 'error');
+  } catch { showToast('Failed to save preferences', 'error'); }
+};
 
   // ── API calls ──────────────────────────────────────────
   const fetchUsers = async () => {
@@ -239,7 +261,7 @@ function Settings() {
             <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
               🔔 {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
             </div>
-            <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
+            {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
             <button style={S.btnLogout} onClick={() => { localStorage.clear(); navigate('/'); }}>⏻ Logout</button>
           </div>
         </div>
@@ -381,6 +403,9 @@ function Settings() {
                 {canAdmin && <button style={S.addBtn} onClick={() => setShowAddDept(!showAddDept)}>+ Add Department</button>}
               </div>
               <div style={S.cardBody}>
+                <div style={{ ...S.noteBox, marginBottom:'16px', background:'#FFFBEB', border:'1px solid #FDE68A', color:'#92400E' }}>
+        💡        Departments added here appear in the Meeting Requests form when Staff submit requests, in Reports (requests per department), and when assigning tasks. Keep this list up to date.
+                </div>
                 {showAddDept && canAdmin && (
                   <div style={S.addForm}>
                     <div style={S.formGrid}>
@@ -428,41 +453,51 @@ function Settings() {
 
           {/* ── PERMISSIONS ── */}
           {activeTab === 'permissions' && (
-            <div style={S.card}>
-              <div style={S.cardHeader}><span style={S.cardTitle}>🔐 Role Permissions</span></div>
-              <div style={S.cardBody}>
-                {role !== 'Director' ? (
-                  <div style={S.noteBox}>Only the Director can manage permissions.</div>
-                ) : (
-                  <div style={S.tableWrap}>
-                    <div style={S.tableHead}>
-                      {['Role','Module','View','Edit','Delete','Approve'].map((h,i) => (
-                        <div key={i} style={{ ...S.th, flex: i<2 ? 1.5 : 0.8 }}>{h}</div>
-                      ))}
-                    </div>
-                    {permissions.length === 0 ? (
-                      <div style={S.emptyMsg}>No permissions found</div>
-                    ) : permissions.map((p, i) => (
-                      <div key={i} style={S.tableRow}>
-                        <div style={{ ...S.td, flex:1.5 }}>
-                          <span style={{ ...S.pill, background:roleBg[p.role]||'#EFF6FF', color:roleColor[p.role]||'#1A3A6B' }}>{p.role}</span>
-                        </div>
-                        <div style={{ ...S.td, flex:1.5, fontSize:'11px' }}>{p.module_name}</div>
-                        {['can_view','can_edit','can_delete','can_approve'].map(field => (
-                          <div key={field} style={{ ...S.td, flex:0.8 }}>
-                            <div style={{ ...S.toggle, background:p[field] ? '#1A3A6B' : '#E2E8F0' }}
-                              onClick={() => handleTogglePermission(p.id, field, p[field])}>
-                              <div style={{ ...S.toggleDot, transform:p[field] ? 'translateX(20px)' : 'translateX(2px)' }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+  <div style={S.card}>
+    <div style={S.cardHeader}>
+      <span style={S.cardTitle}>🔐 Role Permissions</span>
+      {role !== 'Director' && (
+        <span style={{ fontSize:'10px', color:'#92400E', background:'#FEF3C7', padding:'3px 10px', borderRadius:'10px', fontWeight:'600' }}>
+          👁 View Only — Director can edit
+        </span>
+      )}
+    </div>
+    <div style={S.cardBody}>
+      <div style={S.tableWrap}>
+        <div style={S.tableHead}>
+          {['Role','Module','View','Edit','Delete','Approve'].map((h,i) => (
+            <div key={i} style={{ ...S.th, flex: i<2 ? 1.5 : 0.8 }}>{h}</div>
+          ))}
+        </div>
+        {permissions.length === 0 ? (
+          <div style={S.emptyMsg}>No permissions found</div>
+        ) : permissions.map((p, i) => (
+          <div key={i} style={S.tableRow}>
+            <div style={{ ...S.td, flex:1.5 }}>
+              <span style={{ ...S.pill, background:roleBg[p.role]||'#EFF6FF', color:roleColor[p.role]||'#1A3A6B' }}>{p.role}</span>
             </div>
-          )}
+            <div style={{ ...S.td, flex:1.5, fontSize:'11px' }}>{p.module_name}</div>
+            {['can_view','can_edit','can_delete','can_approve'].map(field => (
+              <div key={field} style={{ ...S.td, flex:0.8 }}>
+                <div
+                  style={{
+                    ...S.toggle,
+                    background: p[field] ? '#1A3A6B' : '#E2E8F0',
+                    cursor: role === 'Director' ? 'pointer' : 'not-allowed',
+                    opacity: role === 'Director' ? 1 : 0.7,
+                  }}
+                  onClick={() => role === 'Director' && handleTogglePermission(p.id, field, p[field])}
+                >
+                  <div style={{ ...S.toggleDot, transform: p[field] ? 'translateX(20px)' : 'translateX(2px)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
           {/* ── NOTIFICATIONS ── */}
           {activeTab === 'notifications' && (
@@ -487,7 +522,7 @@ function Settings() {
                     </div>
                   </div>
                 ))}
-                <button style={{ ...S.saveBtn, marginTop:'14px' }} onClick={() => showToast('Preferences saved!')}>Save Preferences</button>
+                <button style={{ ...S.saveBtn, marginTop:'14px' }} onClick={handleSaveNotifPrefs}>Save Preferences</button>
               </div>
             </div>
           )}
@@ -537,8 +572,8 @@ const S = {
   logo:           { width:'130px', objectFit:'contain' },
   portalBanner:   { padding:'14px 16px', borderBottom:'1px solid #E2E8F0' },
   portalName:     { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'4px' },
-  portalDate:     { color:'#64748B', fontSize:'10px', fontWeight:'500' },
-  divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+  portalDate:     { color:'#64748B', fontSize:'11px', fontWeight:'500' },
+  divider:        { height:'1px',  margin:'4px 0' },
   navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
   navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
   navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },

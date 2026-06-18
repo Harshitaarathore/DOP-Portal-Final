@@ -217,7 +217,7 @@ const getViewUrl = (filePath) => {
           </div>
           <div style={S.topbarRight}>
             <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔</div>
-            <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
+            {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
             <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
         </div>

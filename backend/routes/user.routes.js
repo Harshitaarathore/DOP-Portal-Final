@@ -96,4 +96,47 @@ router.put('/:id/status', verifyToken, allowRoles('Secretary', 'Director'), upda
 router.put('/:id/role', verifyToken, allowRoles('Secretary', 'Director'), updateUserRole);
 router.delete('/:id', verifyToken, allowRoles('Director'), deleteUser);
 
+
+// GET notification preferences
+router.get('/notif-prefs', verifyToken, (req, res) => {
+  db.query(`SELECT * FROM user_notif_prefs WHERE user_id = ?`, [req.user.id], (err, rows) => {
+    if (err) return res.json({ success: false, message: err.message, data: null });
+    if (rows.length === 0) {
+      // return defaults
+      return res.json({ success: true, data: { emailNotifs:1, meetingReminders:1, taskDeadlines:1, visitorAlerts:1, requestUpdates:0 } });
+    }
+    res.json({ success: true, data: rows[0] });
+  });
+});
+
+// SAVE notification preferences
+router.put('/notif-prefs', verifyToken, (req, res) => {
+  const { emailNotifs, meetingReminders, taskDeadlines, visitorAlerts, requestUpdates } = req.body;
+  const user_id = req.user.id;
+  db.query(`SELECT id FROM user_notif_prefs WHERE user_id = ?`, [user_id], (err, rows) => {
+    if (err) return res.json({ success: false, message: err.message, data: null });
+    if (rows.length === 0) {
+      db.query(
+        `INSERT INTO user_notif_prefs (id, user_id, emailNotifs, meetingReminders, taskDeadlines, visitorAlerts, requestUpdates) VALUES (UUID(), ?, ?, ?, ?, ?, ?)`,
+        [user_id, emailNotifs?1:0, meetingReminders?1:0, taskDeadlines?1:0, visitorAlerts?1:0, requestUpdates?1:0],
+        (err2) => {
+          if (err2) return res.json({ success: false, message: err2.message, data: null });
+          res.json({ success: true, message: 'Preferences saved', data: null });
+        }
+      );
+    } else {
+      db.query(
+        `UPDATE user_notif_prefs SET emailNotifs=?, meetingReminders=?, taskDeadlines=?, visitorAlerts=?, requestUpdates=? WHERE user_id=?`,
+        [emailNotifs?1:0, meetingReminders?1:0, taskDeadlines?1:0, visitorAlerts?1:0, requestUpdates?1:0, user_id],
+        (err2) => {
+          if (err2) return res.json({ success: false, message: err2.message, data: null });
+          res.json({ success: true, message: 'Preferences saved', data: null });
+        }
+      );
+    }
+  });
+});
+
+
 module.exports = router;
+

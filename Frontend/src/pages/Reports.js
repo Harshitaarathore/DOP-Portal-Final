@@ -21,6 +21,8 @@ function Reports() {
   const [loading, setLoading] = useState(true);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [toast, setToast] = useState(null);
+  const [hoveredStat, setHoveredStat] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const role     = localStorage.getItem('role');
   const name     = localStorage.getItem('name') || 'User';
@@ -36,7 +38,7 @@ function Reports() {
     { label:'Requests',      icon:'📋', path:'/requests' },
     { label:'Documents',     icon:'📁', path:'/documents' },
     { label:'Visitors',      icon:'👥', path:'/visitors' },
-    { label:'Communication', icon:'📬', path:'/communication' },
+    { label:'Communication', icon:'💬', path:'/communications' },
     { label:'Tasks',         icon:'✅', path:'/tasks' },
     { label:'Announcements', icon:'📢', path:'/announcements' },
     { label:'Reports',       icon:'📊', path:'/reports' },
@@ -46,6 +48,7 @@ function Reports() {
   useEffect(() => { fetchReports(); }, []);
 
   const fetchReports = async () => {
+    setRefreshing(true);
     try {
       const res = await API.get('/reports');
       if (res.data.success) setData(res.data.data);
@@ -123,7 +126,7 @@ function Reports() {
             <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
               🔔 {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
             </div>
-            <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
+            {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
             <button style={S.btnLogout} onClick={() => { localStorage.clear(); navigate('/'); }}>⏻ Logout</button>
           </div>
         </div>
@@ -137,7 +140,7 @@ function Reports() {
               <div style={S.pageTitle}>📊 Reports & Analytics</div>
               <div style={S.pageSub}>Analytics and statistics for Director's Office</div>
             </div>
-            <button style={S.refreshBtn} onClick={fetchReports}>↻ Refresh</button>
+            <button style={S.refreshBtn} onClick={fetchReports} disabled={refreshing}> {refreshing ? '↻ Refreshing...' : '↻ Refresh'} </button>
           </div>
 
           {/* TABS */}
@@ -162,19 +165,31 @@ function Reports() {
                   {/* STAT CARDS */}
                   <div style={S.statGrid}>
                     {[
-                      { icon:'📅', label:'Total Events',    value: totals.total_events    || 0, bg:'#EFF6FF', color:'#1A3A6B' },
-                      { icon:'📋', label:'Total Requests',  value: totals.total_requests  || 0, bg:'#FEF3C7', color:'#92400E' },
-                      { icon:'✅', label:'Total Tasks',     value: totals.total_tasks     || 0, bg:'#DCFCE7', color:'#166534' },
-                      { icon:'👥', label:'Total Visitors',  value: totals.total_visitors  || 0, bg:'#EDE9FE', color:'#5B21B6' },
-                      { icon:'📁', label:'Total Documents', value: totals.total_documents || 0, bg:'#FEE2E2', color:'#991B1B' },
-                      { icon:'✔',  label:'Approval Rate',   value: `${approvalRate}%`,         bg:'#DCFCE7', color:'#166534' },
-                    ].map((s, i) => (
-                      <div key={i} style={{ ...S.statCard, background:s.bg }}>
-                        <div style={S.statIcon}>{s.icon}</div>
-                        <div style={{ ...S.statNum, color:s.color }}>{s.value}</div>
-                        <div style={S.statLabel}>{s.label}</div>
-                      </div>
-                    ))}
+  { icon:'📅', label:'Total Events',    value: totals.total_events    || 0, bg:'#EFF6FF', color:'#1A3A6B', path:'/calendar' },
+  { icon:'📋', label:'Total Requests',  value: totals.total_requests  || 0, bg:'#FEF3C7', color:'#92400E', path:'/requests' },
+  { icon:'✅', label:'Total Tasks',     value: totals.total_tasks     || 0, bg:'#DCFCE7', color:'#166534', path:'/tasks' },
+  { icon:'👥', label:'Total Visitors',  value: totals.total_visitors  || 0, bg:'#EDE9FE', color:'#5B21B6', path:'/visitors' },
+  { icon:'📁', label:'Total Documents', value: totals.total_documents || 0, bg:'#FEE2E2', color:'#991B1B', path:'/documents' },
+  { icon:'✔',  label:'Approval Rate',   value: `${approvalRate}%`,         bg:'#DCFCE7', color:'#166534', path:'/requests' },
+].map((s, i) => (
+  <div key={i}
+    style={{
+      ...S.statCard,
+      background: s.bg,
+      cursor: 'pointer',
+      transform: hoveredStat === i ? 'translateY(-3px)' : 'none',
+      boxShadow: hoveredStat === i ? '0 8px 20px rgba(0,0,0,0.10)' : '0 1px 3px rgba(0,0,0,0.04)',
+      transition: 'all 0.2s ease',
+    }}
+    onMouseEnter={() => setHoveredStat(i)}
+    onMouseLeave={() => setHoveredStat(null)}
+    onClick={() => navigate(s.path)}
+  >
+    <div style={S.statIcon}>{s.icon}</div>
+    <div style={{ ...S.statNum, color:s.color }}>{s.value}</div>
+    <div style={S.statLabel}>{s.label}</div>
+  </div>
+))}
                   </div>
 
                   <div style={S.row2}>

@@ -201,7 +201,7 @@ const upcomingTasks = tasks
             </div>
           </div>
           <div style={S.topbarRight}>
-            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔
   {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
 </div>
             {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
