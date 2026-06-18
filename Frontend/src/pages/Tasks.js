@@ -37,36 +37,19 @@ function Tasks() {
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
-const navItems = role === 'Director' ? [
-  {label:'Dashboard',     path:'/director-dashboard'},
-  {label:'Requests',      path:'/director-requests'},
-  {label:'Calendar',      path:'/calendar'},
-  {label:'Announcements', path:'/announcements'},
-  {label:'Documents',     path:'/documents'},
-  {label:'Visitors',      path:'/visitors'},
-  {label:'Tasks',         path:'/tasks'},
-  {label:'Reports',       path:'/reports'},
-  {label:'Settings',      path:'/settings'},
-] : role === 'Faculty' || role === 'Staff' ? [
-  {label:'Dashboard',     path:'/faculty-dashboard'},
-  {label:'My Requests',   path:'/faculty-requests'},
-  {label:'Calendar',      path:'/faculty-calendar'},
-  {label:'Announcements', path:'/announcements'},
-  {label:'My Tasks',      path:'/tasks'},
-  {label:'Settings',      path:'/settings'},
-] : [
-  {label:'Dashboard',     path:'/dashboard'},
-  {label:'Calendar',      path:'/calendar'},
-  {label:'Requests',      path:'/requests'},
-  {label:'Communication', path:'/communication'},
-  {label:'Announcements', path:'/announcements'},
-  {label:'Documents',     path:'/documents'},
-  {label:'Visitors',      path:'/visitors'},
-  {label:'Tasks',         path:'/tasks'},
-  {label:'Reports',       path:'/reports'},
-  {label:'Settings',      path:'/settings'},
-];
-
+  const navItems = [
+    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Calendar',      path:'/calendar',       icon:'📅' },
+    { label:'Requests',      path:'/requests',       icon:'📋' },
+    { label:'Documents',     path:'/documents',      icon:'📁' },
+    { label:'Visitors',      path:'/visitors',       icon:'👥' },
+    { label:'Communication', path:'/communications', icon:'💬' },
+    { label:'Tasks',         path:'/tasks',          icon:'✅' },
+    { label:'Announcements', path:'/announcements',  icon:'📢' },
+    { label:'Reports',       path:'/reports',        icon:'📊' },
+    { label:'Settings',      path:'/settings',       icon:'⚙️' },
+  ];
+  
   useEffect(() => { fetchTasks(); fetchUsers(); }, []);
 
   const fetchTasks = async () => {
@@ -111,27 +94,39 @@ const navItems = role === 'Director' ? [
     }
   };
 
-  const handleAddTask = async () => {
-    setFormError('');
-    if (!newTask.title.trim()) { setFormError('Task title is required'); return; }
-    if (newTask.deadline) {
-      const today = new Date(); today.setHours(0,0,0,0);
-      if (new Date(newTask.deadline) < today) { setFormError('Deadline cannot be in the past'); return; }
-    }
+const handleAddTask = async () => {
+  setFormError('');
+  if (!newTask.title.trim()) { setFormError('Task title is required'); return; }
+  if (!newTask.deadline) { setFormError('Deadline is required'); return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (new Date(newTask.deadline) < today) { setFormError('Deadline cannot be in the past'); return; }
 
-    setSubmitting(true);
-    try {
+  setSubmitting(true);
+  try {
+    if (newTask.assigned_to === '__all__') {
+      // Create one task per user
+      const results = await Promise.all(
+        users.map(u => API.post('/tasks', { ...newTask, assigned_to: u.id }))
+      );
+      const allOk = results.every(r => r.data.success);
+      if (allOk) {
+        showToast(`Task assigned to all ${users.length} users!`, 'success');
+        setShowAddForm(false);
+        setNewTask({ title:'', description:'', assigned_to:'', deadline:'', priority:'Low' });
+        fetchTasks();
+      } else { setFormError('Some assignments failed'); }
+    } else {
       const res = await API.post('/tasks', newTask);
       if (res.data.success) {
         showToast('Task created successfully!', 'success');
         setShowAddForm(false);
         setNewTask({ title:'', description:'', assigned_to:'', deadline:'', priority:'Low' });
         fetchTasks();
-        refreshNotif();
       } else { setFormError(res.data.message); }
-    } catch { setFormError('Failed to create task'); }
-    finally { setSubmitting(false); }
-  };
+    }
+  } catch { setFormError('Failed to create task'); }
+  finally { setSubmitting(false); }
+};
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this task?')) return;
@@ -227,11 +222,12 @@ const navItems = role === 'Director' ? [
                   <option value="Medium">Medium Priority</option>
                   <option value="High">High Priority</option>
                 </select>
-                <input style={S.input} type="date" value={newTask.deadline} onChange={e => setNewTask({...newTask, deadline:e.target.value})} />
+                <input style={S.input} type="date" value={newTask.deadline} min={new Date().toISOString().split('T')[0]} onChange={e => setNewTask({...newTask, deadline:e.target.value})} placeholder="Deadline *" />
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
                 <select style={S.input} value={newTask.assigned_to} onChange={e => setNewTask({...newTask, assigned_to:e.target.value})}>
                   <option value="">Assign to user (optional)</option>
+                  <option value="__all__">📢 Assign to Everyone</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
                 </select>
               </div>
@@ -323,8 +319,9 @@ const navItems = role === 'Director' ? [
                                       )}
                                     </div>
                                     {task.assigned_to && (
-                                      <div style={{ fontSize:'9px', color:'#94A3B8', marginTop:'4px' }}>
-                                        👤 {users.find(u => u.id === task.assigned_to)?.name || task.assigned_to}
+                                      <div style={{ fontSize:'9px', color:'#64748B', marginTop:'4px', display:'flex', alignItems:'center', gap:'4px' }}>
+                                        <span>👤</span>
+                                        <span>{users.find(u => u.id === task.assigned_to)?.name || 'Assigned'}</span>
                                       </div>
                                     )}
                                   </div>

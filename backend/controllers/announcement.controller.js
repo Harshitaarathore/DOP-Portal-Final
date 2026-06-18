@@ -13,8 +13,8 @@ const createAnnouncement = (req, res) => {
   const author = req.user.name || req.user.email;
   const id = uuidv4();
   db.query(
-    `INSERT INTO announcements (id, title, content, priority, category, author, pinned) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, title, content, priority || 'Medium', category || 'General', author, pinned ? 1 : 0],
+    `INSERT INTO announcements (id, title, content, priority, category, author, pinned, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, title, content, priority || 'Medium', category || 'General', author, pinned ? 1 : 0, req.user.id],
     (err) => {
       if (err) return res.json({ success: false, message: err.message, data: null });
 

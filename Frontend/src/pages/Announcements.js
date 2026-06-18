@@ -39,16 +39,16 @@ function Announcements() {
   const showToast = (message, type = 'success') => setToast({ message, type });
 
   const navItems = [
-    { label:'Dashboard',     icon:'🏠', path:'/dashboard' },
-    { label:'Calendar',      icon:'📅', path:'/calendar' },
-    { label:'Requests',      icon:'📋', path:'/requests' },
-    { label:'Documents',     icon:'📁', path:'/documents' },
-    { label:'Visitors',      icon:'👥', path:'/visitors' },
-    { label:'Communication', icon:'📬', path:'/communications' },
-    { label:'Tasks',         icon:'✅', path:'/tasks' },
-    { label:'Announcements', icon:'📢', path:'/announcements' },
-    { label:'Reports',       icon:'📊', path:'/reports' },
-    { label:'Settings',      icon:'⚙️', path:'/settings' },
+    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Calendar',      path:'/calendar',       icon:'📅' },
+    { label:'Requests',      path:'/requests',       icon:'📋' },
+    { label:'Documents',     path:'/documents',      icon:'📁' },
+    { label:'Visitors',      path:'/visitors',       icon:'👥' },
+    { label:'Communication', path:'/communications', icon:'💬' },
+    { label:'Tasks',         path:'/tasks',          icon:'✅' },
+    { label:'Announcements', path:'/announcements',  icon:'📢' },
+    { label:'Reports',       path:'/reports',        icon:'📊' },
+    { label:'Settings',      path:'/settings',       icon:'⚙️' },
   ];
 
   useEffect(() => { fetchAnnouncements(); }, []);
