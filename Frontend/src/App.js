@@ -73,11 +73,12 @@ function App() {
         {/* All logged in */}
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/announcements" element={<Announcements />} />
+        <Route path="/communications" element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Communications /></ProtectedRoute>} />
 
         {/* 404 - must be LAST */}
         <Route path="*" element={<NotFound />} />
 
-        <Route path="/communications" element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Communications /></ProtectedRoute>} />
+        
 
       </Routes> 
     </BrowserRouter>

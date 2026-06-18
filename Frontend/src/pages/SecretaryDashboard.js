@@ -111,11 +111,15 @@ function SecretaryDashboard() {
         setTasks({ pending: p, inProgress: ip, completed: c });
         setStats(prev => ({ ...prev, tasks: p + ip }));
       }
-      if (visitorsRes.data.success) setStats(prev => ({ ...prev, visitors: visitorsRes.data.data.length }));
+      if (visitorsRes.data.success) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayVisitors = visitorsRes.data.data.filter(v => v.visit_date && v.visit_date.split('T')[0] === todayStr);
+  setStats(prev => ({ ...prev, visitors: todayVisitors.length }));
+}
       if (notifRes.data.success) setNotifications(notifRes.data.data.filter(n => n.read_status === 0).slice(0, 3));
     } catch (err) { console.log('Dashboard fetch error:', err); }
 
-    const announcementsRes = await API.get('/user/announcements');
+    const announcementsRes = await API.get('/announcements');
 if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.slice(0, 3));
 
 
@@ -151,7 +155,7 @@ if (announcementsRes.data.success) setAnnouncements(announcementsRes.data.data.s
   const handlePostAnnouncement = async () => {
   if (!newAnnouncement.title || !newAnnouncement.content) { alert('Title and content required'); return; }
   try {
-    const res = await API.post('/user/announcements', newAnnouncement);
+    const res = await API.post('/announcements', newAnnouncement);
     if (res.data.success) {
       setShowAnnouncement(false);
       setNewAnnouncement({ title: '', content: '', category: 'General', priority: 'Medium' });

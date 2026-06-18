@@ -60,7 +60,7 @@ const submitVisitor = (req, res) => {
 
 // GET ALL VISITORS (Secretary)
 const getTodayVisitors = (req, res) => {
-  const sql = `SELECT * FROM visitors ORDER BY visit_date ASC`;
+  const sql = `SELECT * FROM visitors ORDER BY visit_date DESC`;
 
   db.query(sql, (err, results) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
