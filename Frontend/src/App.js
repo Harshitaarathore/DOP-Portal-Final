@@ -43,8 +43,8 @@ function App() {
         <Route path="/visitor-register" element={<VisitorRegister />} />
 
         {/* Secretary only */}
-        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Secretary']}><SecretaryDashboard /></ProtectedRoute>} />
-        <Route path="/requests"  element={<ProtectedRoute allowedRoles={['Secretary']}><Requests /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Secretary','Director']}><SecretaryDashboard /></ProtectedRoute>} />
+        <Route path="/requests"  element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Requests /></ProtectedRoute>} />
 
         {/* Secretary + Director */}
         <Route path="/calendar"   element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Calendar /></ProtectedRoute>} />
@@ -57,7 +57,7 @@ function App() {
 
         {/* Director only */}
         <Route path="/director-dashboard" element={<ProtectedRoute allowedRoles={['Director']}><DirectorDashboard /></ProtectedRoute>} />
-        <Route path="/director-requests"  element={<ProtectedRoute allowedRoles={['Director']}><DirectorRequests /></ProtectedRoute>} />
+
 
         {/* Staff */}
         <Route path="/staff-portal" element={<ProtectedRoute allowedRoles={['Staff']}><StaffPortal /></ProtectedRoute>} />

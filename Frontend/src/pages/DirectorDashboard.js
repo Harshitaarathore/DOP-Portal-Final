@@ -2,276 +2,304 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import lnmiitLogo from '../assets/lnmiit-logo.png';
+import { useNotifCount } from '../hooks/useNotifCount';
+
+// Animation styles (same as SecretaryDashboard)
+const animationStyles = `
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+`;
+if (!document.getElementById('dashboard-animations')) {
+  const style = document.createElement('style');
+  style.id = 'dashboard-animations';
+  style.textContent = animationStyles;
+  document.head.appendChild(style);
+}
+
+function Toast({ message, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+  const bg = type === 'success' ? '#166534' : type === 'error' ? '#991B1B' : '#1A3A6B';
+  return (
+    <div style={{ position:'fixed', top:'20px', right:'20px', background:bg, color:'#fff', padding:'12px 20px', borderRadius:'8px', fontSize:'13px', fontWeight:'600', zIndex:9999, boxShadow:'0 4px 12px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:'8px', animation:'slideDown 0.3s ease' }}>
+      {type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} {message}
+    </div>
+  );
+}
 
 function DirectorDashboard() {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState([]);
-  const [schedule, setSchedule] = useState([]);
-  const [stats, setStats] = useState({ requests: 0, meetings: 0, visitors: 0, tasks: 0 });
-  const [notifications, setNotifications] = useState([]);
-
-  const name = localStorage.getItem('name') || 'Director';
+  const name  = localStorage.getItem('name')  || 'Director';
+  const role  = localStorage.getItem('role')  || 'Director';
+  const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
 
-  const priBg    = { High:'#FEE2E2', Medium:'#DBEAFE', Low:'#DCFCE7' };
-  const priColor = { High:'#991B1B', Medium:'#1E40AF', Low:'#166534' };
+  const [stats, setStats] = useState({ requests: 0, meetings: 0, tasks: 0, visitors: 0 });
+  const [schedule, setSchedule] = useState([]);
+  const [requests, setRequests] = useState([]);
+  
+  
+  const [announcements, setAnnouncements] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredStat, setHoveredStat] = useState(null);
+  const [hoveredSchItem, setHoveredSchItem] = useState(null);
+  const [hoveredReqItem, setHoveredReqItem] = useState(null);
+  
+  const [hoveredBtnId, setHoveredBtnId] = useState(null);
+  const { count: notifCount } = useNotifCount();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const showToast = (message, type = 'success') => setToast({ message, type });
+  const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
-  const fetchData = async () => {
+  useEffect(() => { fetchDashboardData(); }, []);
+
+  const fetchDashboardData = async () => {
     try {
-      const [reqRes, evRes, taskRes, visRes, notifRes] = await Promise.all([
-        API.get('/meetings/all'),
+      const [eventsRes, reqRes, tasksRes, visitorsRes] = await Promise.all([
         API.get('/events/full'),
+        API.get('/meetings/all'),
         API.get('/tasks'),
         API.get('/visitors/today'),
-        API.get('/user/notifications')
       ]);
 
+      if (eventsRes.data.success) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayEvents = eventsRes.data.data.filter(e => e.start_time.split('T')[0] === today);
+        setSchedule(todayEvents.slice(0, 4));
+        setStats(prev => ({ ...prev, meetings: todayEvents.length }));
+        const upcoming = eventsRes.data.data.filter(e => new Date(e.start_time) > new Date());
+
+      }
       if (reqRes.data.success) {
         const pending = reqRes.data.data.filter(r => r.status === 'Pending');
         setRequests(pending.slice(0, 4));
         setStats(prev => ({ ...prev, requests: pending.length }));
       }
-
-      if (evRes.data.success) {
-        const today = new Date().toISOString().split('T')[0];
-        const todayEvents = evRes.data.data.filter(e => e.start_time.split('T')[0] === today);
-        setSchedule(todayEvents.slice(0, 4));
-        setStats(prev => ({ ...prev, meetings: todayEvents.length }));
+      if (tasksRes.data.success) {
+        const p  = tasksRes.data.data['Pending'].length;
+        const ip = tasksRes.data.data['In Progress'].length;
+        setStats(prev => ({ ...prev, tasks: p + ip }));
       }
-
-      if (taskRes.data.success) {
-        const active = [...taskRes.data.data['Pending'], ...taskRes.data.data['In Progress']];
-        setStats(prev => ({ ...prev, tasks: active.length }));
+      if (visitorsRes.data.success) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayVisitors = visitorsRes.data.data.filter(v => v.visit_date && v.visit_date.split('T')[0] === todayStr);
+        setStats(prev => ({ ...prev, visitors: todayVisitors.length }));
       }
+    } catch (err) { console.log('Dashboard fetch error:', err); }
 
-      if (visRes.data.success) {
-        setStats(prev => ({ ...prev, visitors: visRes.data.data.length }));
-      }
-
-      if (notifRes.data.success) {
-        setNotifications(notifRes.data.data.filter(n => !n.read_status).slice(0, 3));
-      }
-
-    } catch (err) {
-      console.log('Error fetching director data:', err);
-    }
+    try {
+      const annRes = await API.get('/announcements');
+      if (annRes.data.success) setAnnouncements(annRes.data.data.slice(0, 3));
+    } catch (err) { console.log(err); }
   };
 
   const handleApprove = async (id) => {
     try {
       const res = await API.put(`/meetings/${id}/approve`);
-      if (res.data.success) {
-        alert('Request approved!');
-        fetchData();
-      }
-    } catch (err) {
-      alert('Failed to approve');
-    }
+      if (res.data.success) { showToast('Request approved!'); fetchDashboardData(); }
+      else showToast(res.data.message, 'error');
+    } catch { showToast('Failed to approve', 'error'); }
   };
-
   const handleReject = async (id) => {
     try {
       const res = await API.put(`/meetings/${id}/reject`);
-      if (res.data.success) {
-        alert('Request rejected!');
-        fetchData();
-      }
-    } catch (err) {
-      alert('Failed to reject');
-    }
+      if (res.data.success) { showToast('Request rejected', 'error'); fetchDashboardData(); }
+      else showToast(res.data.message, 'error');
+    } catch { showToast('Failed to reject', 'error'); }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
+  const getEventTypeStyle = (type) => {
+    if (type === 'Confidential') return { tagBg:'#FEE2E2', tagColor:'#991B1B', dot:'#EF4444' };
+    if (type === 'Internal')     return { tagBg:'#FEF3C7', tagColor:'#92400E', dot:'#F59E0B' };
+    return                              { tagBg:'#DBEAFE', tagColor:'#1E40AF', dot:'#2563EB' };
+  };
+  const getPriorityStyle = (priority) => {
+    if (priority === 'High')   return { priBg:'#FEE2E2', priColor:'#991B1B' };
+    if (priority === 'Medium') return { priBg:'#DBEAFE', priColor:'#1E40AF' };
+    return                            { priBg:'#DCFCE7', priColor:'#166534' };
   };
 
-  const getTypeStyle = (type) => {
-    if (type === 'Confidential') return { tagBg: '#FEE2E2', tagColor: '#991B1B', dot: '#EF4444' };
-    if (type === 'Internal') return { tagBg: '#FEF3C7', tagColor: '#92400E', dot: '#F59E0B' };
-    return { tagBg: '#DBEAFE', tagColor: '#1E40AF', dot: '#2563EB' };
-  };
-
+  const today = new Date().toLocaleDateString('en-US', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12)       return 'Good morning';
-    else if (hour >= 12 && hour < 17) return 'Good afternoon';
-    else if (hour >= 17 && hour < 21) return 'Good evening';
-    else                               return 'Good night';
+    const h = new Date().getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   };
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+  const navItems = [
+    { label:'Dashboard',     path:'/director-dashboard', icon:'🏠' },
+    { label:'Calendar',      path:'/calendar',           icon:'📅' },
+    { label:'Requests',      path:'/requests',           icon:'📋' },
+    { label:'Documents',     path:'/documents',          icon:'📁' },
+    { label:'Visitors',      path:'/visitors',           icon:'👥' },
+    { label:'Communication', path:'/communications',     icon:'💬' },
+    { label:'Tasks',         path:'/tasks',              icon:'✅' },
+    { label:'Announcements', path:'/announcements',      icon:'📢' },
+    { label:'Reports',       path:'/reports',            icon:'📊' },
+    { label:'Settings',      path:'/settings',           icon:'⚙️' },
+  ];
 
   return (
-    <div style={styles.page}>
+    <div style={S.page} className="page-transition">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
-          <img src={lnmiitLogo} alt="LNMIIT Logo" style={styles.lnmiitLogo} />
-          <div style={styles.logoTitle}>Director's Office Portal</div>
-          <div style={styles.logoSub}>Director's Office</div>
+      <div style={S.sidebar}>
+        <div style={S.logoWrap}><img src={lnmiitLogo} alt="LNMIIT" style={S.logo} /></div>
+        <div style={S.portalBanner}>
+          <div style={S.portalName}>Director's Office Portal</div>
+          <div style={S.portalDate}>{today}</div>
         </div>
-        {[
-          {label:'Dashboard',  path:'/director-dashboard'},
-          {label:'Requests',   path:'/director-requests'},
-          {label:'Calendar',   path:'/calendar'},
-          {label:'Documents',  path:'/documents'},
-          {label:'Visitors',   path:'/visitors'},
-          {label:'Tasks',      path:'/tasks'},
-          {label:'Reports',    path:'/reports'},
-          {label:'Settings',   path:'/settings'},
-        ].map((item, i) => (
+        <div style={S.divider} />
+        {navItems.map((item, i) => (
           <div key={i}
-            style={{...styles.navItem, ...(item.path === window.location.pathname ? styles.navActive : {})}}
+            style={{ ...S.navItem, ...(item.path === window.location.pathname ? S.navActive : {}), ...(hoveredNav === i && item.path !== window.location.pathname ? { background:'#F8FAFC', color:'#1A3A6B' } : {}) }}
+            onMouseEnter={() => setHoveredNav(i)}
+            onMouseLeave={() => setHoveredNav(null)}
             onClick={() => navigate(item.path)}
           >
-            {item.label}
+            <span style={S.navIcon}>{item.icon}</span>{item.label}
           </div>
         ))}
-        <div style={styles.sidebarFooter}>
-          <div style={styles.avatar}>{initials}</div>
-          <div style={{flex:1}}>
-            <div style={styles.userName}>{name}</div>
-            <div style={styles.userRole}>Director</div>
-          </div>
-        </div>
       </div>
 
       {/* MAIN */}
-      <div style={styles.main}>
+      <div style={S.main}>
 
         {/* TOPBAR */}
-        <div style={styles.topbar}>
-          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-            <img src={lnmiitLogo} alt="LNMIIT" style={styles.topbarLogo} />
+        <div style={S.topbar}>
+          <div style={S.topbarUser}>
+            <div style={S.topbarAvatar}>{initials}</div>
             <div>
-              <div style={styles.topbarTitle}>Director's Office Portal — LNMIIT</div>
-              <div style={styles.topbarSub}>{today}</div>
+              <div style={S.topbarUserName}>{name}</div>
+              <div style={S.topbarUserEmail}>{email}</div>
+              <div style={S.topbarUserRole}>{role}</div>
             </div>
           </div>
-          <div style={styles.topbarRight}>
-            <div style={styles.notifBtn} onClick={() => navigate('/notifications')}>
-              🔔 {notifications.length > 0 ? `(${notifications.length})` : ''}
+          <div style={S.topbarRight}>
+            <div style={S.notifWrap} onClick={() => navigate('/notifications')}>
+              🔔 {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
             </div>
-            <button style={styles.logoutTopBtn} onClick={handleLogout}>
-              Logout
-            </button>
+            <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
         </div>
 
-        <div style={styles.content}>
+        {/* CONTENT */}
+        <div style={S.content}>
 
           {/* GREETING */}
-          <div style={styles.greeting}>
-            {getGreeting()},{' '}
-            <span style={{color:'#2563EB', fontWeight:'700'}}>{name}</span>
-            &nbsp;— {today} &nbsp;|&nbsp; Have a productive day!
+          <div style={S.greeting}>
+            {getGreeting()}, <span style={{ color:'#2563EB', fontWeight:'700' }}>{name}</span> &nbsp;|&nbsp; Here's your office overview for today.
           </div>
 
           {/* STAT CARDS */}
-          <div style={styles.statGrid}>
+          <div style={S.statGrid}>
             {[
-              {icon:'📋', num: stats.requests, label:'Pending Approvals', bg:'#FEE2E2', color:'#991B1B'},
-              {icon:'📅', num: stats.meetings, label:"Today's Meetings",  bg:'#EFF6FF', color:'#1A3A6B'},
-              {icon:'👥', num: stats.visitors, label:'Visitors Today',    bg:'#F0FDF4', color:'#166534'},
-              {icon:'✅', num: stats.tasks,    label:'Active Tasks',      bg:'#FFFBEB', color:'#92400E'},
-            ].map((s,i) => (
-              <div key={i} style={styles.statCard}>
-                <div style={{...styles.statIcon, background:s.bg}}>{s.icon}</div>
+              { icon:'✉️', num: stats.requests, label:'Pending Approvals', bg:'#FEE2E2', path:'/requests' },
+              { icon:'📅', num: stats.meetings, label:"Today's Meetings",  bg:'#EFF6FF', path:'/calendar' },
+              { icon:'✅', num: stats.tasks,    label:'Active Tasks',      bg:'#FFFBEB', path:'/tasks' },
+              { icon:'👥', num: stats.visitors, label:"Today's Visitors",  bg:'#F0FDF4', path:'/visitors' },
+            ].map((s, i) => (
+              <div key={i}
+                style={{ ...S.statCard, ...(hoveredStat === i ? { boxShadow:'0 4px 12px rgba(37,99,235,0.15)', transform:'translateY(-1px)' } : {}) }}
+                onMouseEnter={() => setHoveredStat(i)}
+                onMouseLeave={() => setHoveredStat(null)}
+                onClick={() => navigate(s.path)}
+              >
+                <div style={{ ...S.statIcon, background:s.bg }}>{s.icon}</div>
                 <div>
-                  <div style={{...styles.statNum, color:s.color}}>{s.num}</div>
-                  <div style={styles.statLabel}>{s.label}</div>
+                  <div style={S.statNum}>{s.num}</div>
+                  <div style={S.statLabel}>{s.label}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={styles.midRow}>
+          {/* THREE COLUMNS */}
+          <div style={S.threeCol}>
 
-            {/* PENDING APPROVALS */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>📋 Pending Approvals</span>
-                <span style={styles.viewAll} onClick={() => navigate('/director-requests')}>View all →</span>
+            {/* PENDING APPROVALS — Director has final approval authority per SRS */}
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.cardTitle}>📋 Pending Approvals</span>
+                <span style={S.viewAll} onClick={() => navigate('/requests')}>View all →</span>
               </div>
-              {requests.length === 0 ? (
-                <div style={styles.emptyMsg}>No pending approvals</div>
-              ) : requests.map((req, i) => (
-                <div key={i} style={styles.reqItem}>
-                  <div style={{...styles.reqAvatar, background:'#1A3A6B'}}>
-                    {req.purpose ? req.purpose[0].toUpperCase() : 'R'}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={styles.reqName}>
-                      {req.purpose ? req.purpose.slice(0, 25) + '...' : 'No purpose'}
-                    </div>
-                    <div style={styles.reqDept}>
-                      {req.preferred_date ? new Date(req.preferred_date).toLocaleDateString() : 'No date'}
-                    </div>
-                  </div>
-                  <span style={{...styles.tag, background:priBg[req.priority], color:priColor[req.priority]}}>
-                    {req.priority}
-                  </span>
-                  <div style={styles.actionBtns}>
-                    <button style={styles.approveBtn} onClick={() => handleApprove(req.id)}>✓</button>
-                    <button style={styles.rejectBtn}  onClick={() => handleReject(req.id)}>✗</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* TODAY'S SCHEDULE */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>📅 Today's Schedule</span>
-                <span style={styles.viewAll} onClick={() => navigate('/calendar')}>View all →</span>
-              </div>
-              {schedule.length === 0 ? (
-                <div style={styles.emptyMsg}>No events today</div>
-              ) : schedule.map((ev, i) => {
-                const s = getTypeStyle(ev.type);
-                const time = new Date(ev.start_time).toLocaleTimeString('en-US', {
-                  hour: '2-digit', minute: '2-digit', hour12: false
-                });
+              {requests.length === 0 ? <div style={S.empty}>No pending approvals</div> : requests.map((r, i) => {
+                const st = getPriorityStyle(r.priority);
                 return (
-                  <div key={i} style={styles.schItem}>
-                    <span style={styles.schTime}>{time}</span>
-                    <div style={{...styles.dot, background: s.dot}}></div>
-                    <span style={styles.schTitle}>{ev.title}</span>
-                    <span style={{...styles.tag, background: s.tagBg, color: s.tagColor}}>{ev.type}</span>
+                  <div key={i}
+                    style={{ ...S.reqItem, ...(hoveredReqItem === i ? { background:'#F8FAFC', paddingLeft:'16px' } : {}) }}
+                    onMouseEnter={() => setHoveredReqItem(i)}
+                    onMouseLeave={() => setHoveredReqItem(null)}
+                  >
+                    <div style={{ flex:1 }}>
+                      <div style={S.reqId}>#{r.id.slice(0,8)}</div>
+                      <div style={S.reqName}>{r.purpose ? r.purpose.slice(0,25)+'...' : 'No purpose'}</div>
+                      <span style={{ ...S.tag, background:st.priBg, color:st.priColor }}>{r.priority}</span>
+                    </div>
+                    <div style={{ display:'flex', gap:'4px' }}>
+                      <button
+                        style={{ ...S.approveBtn, ...(hoveredBtnId === `approve-${r.id}` ? { boxShadow:'0 2px 8px rgba(34,197,94,0.3)', transform:'scale(1.05)' } : {}) }}
+                        onMouseEnter={() => setHoveredBtnId(`approve-${r.id}`)}
+                        onMouseLeave={() => setHoveredBtnId(null)}
+                        onClick={() => handleApprove(r.id)}
+                      >✓</button>
+                      <button
+                        style={{ ...S.rejectBtn, ...(hoveredBtnId === `reject-${r.id}` ? { boxShadow:'0 2px 8px rgba(239,68,68,0.3)', transform:'scale(1.05)' } : {}) }}
+                        onMouseEnter={() => setHoveredBtnId(`reject-${r.id}`)}
+                        onMouseLeave={() => setHoveredBtnId(null)}
+                        onClick={() => handleReject(r.id)}
+                      >✕</button>
+                    </div>
                   </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* NOTIFICATIONS */}
-          {notifications.length > 0 && (
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardTitle}>🔔 New Notifications</span>
-                <span style={styles.viewAll} onClick={() => navigate('/notifications')}>View all →</span>
+            {/* TODAY'S SCHEDULE — full details visible per SRS (Director sees everything) */}
+            <div style={S.card}>
+              <div style={S.cardHead}>
+                <span style={S.cardTitle}>📅 Today's Schedule</span>
+                <span style={S.viewAll} onClick={() => navigate('/calendar')}>View all →</span>
               </div>
-              <div style={{padding:'8px 16px'}}>
-                {notifications.map((n, i) => (
-                  <div key={i} style={{...styles.alertItem, background:'#EFF6FF', border:'1px solid #BFDBFE'}}>
-                    <span style={{fontSize:'16px'}}>🔔</span>
-                    <div>
-                      <div style={styles.alertTitle}>{n.message}</div>
-                      <div style={styles.alertBody}>{new Date(n.created_at).toLocaleString()}</div>
+              {schedule.length === 0 ? <div style={S.empty}>No events today</div> : schedule.map((ev, i) => {
+                const st = getEventTypeStyle(ev.type);
+                const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
+                return (
+                  <div key={i}
+                    style={{ ...S.schItem, ...(hoveredSchItem === i ? { background:'#F8FAFC' } : {}) }}
+                    onMouseEnter={() => setHoveredSchItem(i)}
+                    onMouseLeave={() => setHoveredSchItem(null)}
+                  >
+                    <span style={S.schTime}>{time}</span>
+                    <div style={{ ...S.dot, background:st.dot }} />
+                    <div style={{ flex:1 }}>
+                      <div style={S.schTitle}>{ev.title}</div>
+                      <span style={{ ...S.tag, background:st.tagBg, color:st.tagColor }}>{ev.type}</span>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+
+          </div>
+
+
+          {/* RECENT ANNOUNCEMENTS */}
+          <div style={S.card}>
+            <div style={S.cardHead}>
+              <span style={S.cardTitle}>📢 Recent Announcements</span>
+              <span style={S.viewAll} onClick={() => navigate('/announcements')}>View all →</span>
+            </div>
+            {announcements.length === 0 ? <div style={S.empty}>No announcements</div> : announcements.map((a, i) => (
+              <div key={i} style={{ padding:'10px 14px', borderBottom:'1px solid #F8FAFC' }}>
+                <div style={{ fontSize:'12px', fontWeight:'700', color:'#1E293B', marginBottom:'3px' }}>{a.title}</div>
+                <div style={{ fontSize:'11px', color:'#64748B' }}>{a.content}</div>
+                <div style={{ fontSize:'9px', color:'#94A3B8', marginTop:'4px' }}>{new Date(a.created_at).toLocaleDateString('en-IN', { dateStyle:'medium' })}</div>
+              </div>
+            ))}
+          </div>
 
         </div>
       </div>
@@ -279,56 +307,59 @@ function DirectorDashboard() {
   );
 }
 
-const styles = {
-  page:          { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F0F4FA', overflow:'hidden' },
-  sidebar:       { width:'168px', background:'#122951', display:'flex', flexDirection:'column', flexShrink:0 },
-  sidebarLogo:   { padding:'20px 16px 16px', borderBottom:'1px solid rgba(255,255,255,0.08)', marginBottom:'10px' },
-  lnmiitLogo: { width: '90px', objectFit: 'contain', marginBottom: '8px', background: '#fff', borderRadius: '6px', padding: '4px' },
-  topbarLogo: { height: '32px', objectFit: 'contain', background: '#fff', borderRadius: '6px', padding: '3px' },
-  logoTitle:     { color:'#fff', fontSize:'13px', fontWeight:'700' },
-  logoSub:       { color:'rgba(255,255,255,0.4)', fontSize:'9px' },
-  navItem:       { display:'flex', alignItems:'center', padding:'9px 16px', margin:'1px 8px', borderRadius:'8px', cursor:'pointer', fontSize:'12px', color:'rgba(255,255,255,0.7)', fontWeight:'500' },
-  navActive:     { background:'rgba(37,99,235,0.35)', color:'#fff' },
-  sidebarFooter: { marginTop:'auto', padding:'14px 16px', borderTop:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', gap:'8px' },
-  avatar:        { width:'30px', height:'30px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'#fff', flexShrink:0 },
-  userName:      { color:'#fff', fontSize:'11px', fontWeight:'600' },
-  userRole:      { color:'rgba(255,255,255,0.45)', fontSize:'9px' },
-  logoutBtn:     { color:'rgba(255,255,255,0.5)', fontSize:'16px', cursor:'pointer', padding:'4px' },
-  main:          { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
-  topbar:        { background:'#1A3A6B', padding:'12px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 },
-  topbarTitle:   { color:'#fff', fontSize:'14px', fontWeight:'700' },
-  topbarSub:     { color:'rgba(255,255,255,0.7)', fontSize:'10px', marginTop:'1px' },
-  topbarRight:   { display:'flex', alignItems:'center', gap:'10px' },
-  notifBtn:      { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'8px', padding:'6px 10px', color:'#fff', fontSize:'14px', cursor:'pointer' },
- logoutTopBtn: { background: '#DC2626', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '11px', fontWeight: '700', cursor: 'pointer' },
-  content:       { flex:1, overflowY:'auto', padding:'18px 22px' },
-  greeting:      { fontSize:'13px', color:'#475569', marginBottom:'16px' },
-  statGrid:      { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'16px' },
-  statCard:      { background:'#fff', borderRadius:'12px', padding:'16px', border:'1px solid #E2E8F0', display:'flex', alignItems:'center', gap:'12px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' },
-  statIcon:      { width:'42px', height:'42px', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px', flexShrink:0 },
-  statNum:       { fontSize:'22px', fontWeight:'700', lineHeight:1 },
-  statLabel:     { fontSize:'10px', color:'#64748B', marginTop:'3px', fontWeight:'500' },
-  midRow:        { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'14px' },
-  card:          { background:'#fff', borderRadius:'12px', border:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', overflow:'hidden', marginBottom:'12px' },
-  cardHeader:    { padding:'13px 16px 10px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' },
-  cardTitle:     { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
-  viewAll:       { fontSize:'10px', color:'#2563EB', fontWeight:'600', cursor:'pointer' },
-  reqItem:       { display:'flex', alignItems:'center', gap:'10px', padding:'8px 16px', borderBottom:'1px solid #F8FAFC' },
-  reqAvatar:     { width:'32px', height:'32px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'700', color:'#fff', flexShrink:0 },
-  reqName:       { fontSize:'11px', fontWeight:'600', color:'#1E293B' },
-  reqDept:       { fontSize:'9px', color:'#94A3B8' },
-  tag:           { fontSize:'8px', fontWeight:'600', padding:'3px 8px', borderRadius:'10px', flexShrink:0 },
-  actionBtns:    { display:'flex', gap:'4px', flexShrink:0 },
-  approveBtn:    { background:'#DCFCE7', color:'#166534', border:'1px solid #BBF7D0', borderRadius:'6px', padding:'4px 8px', fontSize:'11px', fontWeight:'700', cursor:'pointer' },
-  rejectBtn:     { background:'#FEE2E2', color:'#991B1B', border:'1px solid #FECACA', borderRadius:'6px', padding:'4px 8px', fontSize:'11px', fontWeight:'700', cursor:'pointer' },
-  schItem:       { display:'flex', alignItems:'center', gap:'10px', padding:'8px 16px', borderBottom:'1px solid #F8FAFC' },
-  schTime:       { fontSize:'10px', color:'#94A3B8', width:'36px', flexShrink:0, fontFamily:'monospace' },
-  dot:           { width:'8px', height:'8px', borderRadius:'50%', flexShrink:0 },
-  schTitle:      { fontSize:'11px', fontWeight:'600', color:'#1E293B', flex:1 },
-  alertItem:     { display:'flex', alignItems:'flex-start', gap:'10px', padding:'10px 12px', borderRadius:'9px', margin:'8px 0' },
-  alertTitle:    { fontSize:'11px', fontWeight:'700', color:'#1E293B', marginBottom:'2px' },
-  alertBody:     { fontSize:'9px', color:'#64748B', lineHeight:1.4 },
-  emptyMsg:      { padding:'16px', fontSize:'11px', color:'#94A3B8', textAlign:'center' },
+const S = {
+  page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
+  logoWrap:       { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
+  logo:           { width:'130px', objectFit:'contain' },
+  portalBanner:   { padding:'14px 16px' },
+  portalName:     { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.4, marginBottom:'6px' },
+  portalDate:     { color:'#64748B', fontSize:'11px', fontWeight:'500' },
+  divider:        { height:'1px', background:'#E2E8F0', margin:'4px 0' },
+  navItem:        { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
+  navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
+  navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
+  main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
+  topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+  topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
+  topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
+  topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700', lineHeight:1.2 },
+  topbarUserEmail:{ color:'#94A3B8', fontSize:'9px', marginTop:'1px' },
+  topbarUserRole: { color:'#64748B', fontSize:'10px', marginTop:'1px' },
+  topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
+  notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
+  notifBadge:     { position:'absolute', top:'-5px', right:'-5px', background:'#EF4444', color:'#fff', borderRadius:'50%', width:'14px', height:'14px', fontSize:'8px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center' },
+  btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap' },
+  content:        { flex:1, overflowY:'auto', padding:'16px 20px', animation:'fadeIn 0.3s ease' },
+  greeting:       { fontSize:'13px', color:'#475569', marginBottom:'14px', fontWeight:'500' },
+  statGrid:       { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'14px' },
+  statIcon:       { width:'40px', height:'40px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 },
+  statNum:        { fontSize:'20px', fontWeight:'700', color:'#1E293B', lineHeight:1 },
+  statLabel:      { fontSize:'10px', color:'#64748B', marginTop:'2px', fontWeight:'500' },
+  statCard:       { background:'#fff', borderRadius:'10px', padding:'14px', border:'1px solid #E2E8F0', display:'flex', alignItems:'center', gap:'10px', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', transition:'box-shadow 0.2s ease, transform 0.2s ease', cursor:'pointer' },
+  threeCol:       { display:'grid', gridTemplateColumns:'1fr 1fr ', gap:'12px', marginBottom:'12px' },
+  card:           { background:'#fff', borderRadius:'10px', border:'1px solid #E2E8F0', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', overflow:'hidden', marginBottom:'12px', transition:'all 0.2s ease' },
+  cardHead:       { padding:'12px 14px 10px', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', justifyContent:'space-between' },
+  cardTitle:      { fontSize:'12px', fontWeight:'700', color:'#1E293B' },
+  viewAll:        { fontSize:'10px', color:'#2563EB', fontWeight:'600', cursor:'pointer', transition:'all 0.2s ease' },
+  empty:          { padding:'16px', fontSize:'11px', color:'#94A3B8', textAlign:'center' },
+  schItem:        { display:'flex', alignItems:'flex-start', gap:'8px', padding:'10px 16px', borderBottom:'1px solid #F8FAFC', transition:'background 0.2s ease', cursor:'pointer' },
+  schTime:        { fontSize:'10px', color:'#94A3B8', width:'34px', flexShrink:0, fontFamily:'monospace', marginTop:'2px' },
+  dot:            { width:'7px', height:'7px', borderRadius:'50%', flexShrink:0, marginTop:'4px' },
+  schTitle:       { fontSize:'11px', fontWeight:'600', color:'#1E293B', marginBottom:'3px' },
+  tag:            { fontSize:'8px', fontWeight:'600', padding:'2px 7px', borderRadius:'10px' },
+  reqItem:        { display:'flex', alignItems:'center', gap:'8px', padding:'8px 14px', borderBottom:'1px solid #F8FAFC', transition:'all 0.2s ease' },
+  reqId:          { fontSize:'9px', color:'#94A3B8', marginBottom:'2px' },
+  reqName:        { fontSize:'11px', fontWeight:'600', color:'#1E293B', marginBottom:'3px' },
+  approveBtn:     { background:'#DCFCE7', color:'#166534', border:'1px solid #BBF7D0', borderRadius:'5px', padding:'4px 8px', fontSize:'12px', fontWeight:'700', cursor:'pointer', transition:'all 0.2s ease' },
+  rejectBtn:      { background:'#FEE2E2', color:'#991B1B', border:'1px solid #FECACA', borderRadius:'5px', padding:'4px 8px', fontSize:'12px', fontWeight:'700', cursor:'pointer', transition:'all 0.2s ease' },
+  alertItem:      { display:'flex', alignItems:'flex-start', gap:'8px', padding:'8px 10px', borderRadius:'8px', margin:'6px 10px', transition:'all 0.2s ease' },
+  alertTitle:     { fontSize:'11px', fontWeight:'700', color:'#1E293B', marginBottom:'2px' },
+  alertBody:      { fontSize:'9px', color:'#64748B', lineHeight:1.4 },
+  taskGrid:       { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', padding:'12px 14px' },
+  taskCard:       { borderRadius:'8px', padding:'14px', textAlign:'center', transition:'all 0.2s ease', cursor:'pointer' },
+  taskNum:        { fontSize:'26px', fontWeight:'700', lineHeight:1, marginBottom:'4px' },
+  taskLabel:      { fontSize:'11px', color:'#64748B', fontWeight:'500' },
 };
 
 export default DirectorDashboard;
