@@ -27,7 +27,7 @@ function Calendar() {
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  useEffect(() => { fetchEvents(); fetchTasks(); }, []);
+  useEffect(() => { fetchEvents(); if (role !== 'Staff') fetchTasks(); }, []);
 
   const fetchEvents = async () => {
     try {
@@ -143,10 +143,10 @@ function Calendar() {
   };
   const weekDays = getWeekDays();
 
-  const allItems = [
-    ...events.map(e => ({ ...e, itemType: 'event', sortDate: new Date(e.start_time) })),
-    ...tasks.filter(t => t.deadline).map(t => ({ ...t, itemType: 'task', sortDate: new Date(t.deadline) })),
-  ].sort((a, b) => a.sortDate - b.sortDate);
+const allItems = [
+  ...events.map(e => ({ ...e, itemType: 'event', sortDate: new Date(e.start_time) })),
+  ...(role !== 'Staff' ? tasks.filter(t => t.deadline).map(t => ({ ...t, itemType: 'task', sortDate: new Date(t.deadline) })) : []),
+].sort((a, b) => a.sortDate - b.sortDate);
 
   const navItems = role === 'Staff' ? [
     { label: 'Dashboard', path: '/staff-portal?tab=dashboard', icon: '🏠' },
@@ -319,11 +319,11 @@ function Calendar() {
                                 const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
                                 return (
                                   <div key={j} style={{ background: s.tagBg, color: s.tagColor, fontSize: '7px', fontWeight: '600', borderRadius: '3px', padding: '1px 3px', marginBottom: '1px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                                    {ev.title}
+                                    {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title}
                                   </div>
                                 );
                               })}
-                              {dayTsks.slice(0, 1).map((t, j) => (
+                              {role !== 'Staff' && dayTsks.slice(0, 1).map((t, j) => (
                                 <div key={j} style={{ background: '#EDE9FE', color: '#5B21B6', fontSize: '7px', fontWeight: '600', borderRadius: '3px', padding: '1px 3px', marginBottom: '1px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                   📌 {t.title}
                                 </div>
@@ -372,8 +372,10 @@ function Calendar() {
                       return (
                         <div key={i} style={S.upcomingItem}>
                           <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>{time}</div>
-                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{ev.title}</div>
-                          <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>
+                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
+                            {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title}
+                          </div>
+                          {role !== 'Staff' && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>}
                           {canManage && (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
@@ -386,7 +388,7 @@ function Calendar() {
                   </>
                 )}
 
-                {selectedDayTasks.length > 0 && (
+                {role !== 'Staff' && selectedDayTasks.length > 0 && (
                   <>
                     <div style={{ ...S.sectionLabel, background: '#EDE9FE', color: '#5B21B6' }}>📌 Task Deadlines</div>
                     {selectedDayTasks.map((t, i) => (
@@ -411,22 +413,28 @@ function Calendar() {
                       <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>
                         {new Date(u.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                       </div>
-                      <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{u.title}</div>
-                      <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{u.type}</span>
+                      <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
+                        {(role === 'Staff' && u.type !== 'Public') ? 'Busy' : u.title}
+                      </div>
+                      {role !== 'Staff' && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{u.type}</span>}
                     </div>
                   );
                 })}
 
-                <div style={{ ...S.upcomingTitle, color: '#5B21B6' }}>📌 Upcoming Deadlines</div>
-                {upcomingTasks.length === 0 ? <div style={S.empty}>No upcoming deadlines</div> : upcomingTasks.map((t, i) => (
-                  <div key={i} style={S.upcomingItem}>
-                    <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>
-                      {new Date(t.deadline).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                {role !== 'Staff' && (
+                  <>
+                    <div style={{ ...S.upcomingTitle, color: '#5B21B6' }}>📌 Upcoming Deadlines</div>
+                    {upcomingTasks.length === 0 ? <div style={S.empty}>No upcoming deadlines</div> : upcomingTasks.map((t, i) => (
+                      <div key={i} style={S.upcomingItem}>
+                        <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>
+                          {new Date(t.deadline).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                        </div>
+                      <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
+                      <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
-                    <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
-                  </div>
-                ))}
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -466,9 +474,9 @@ function Calendar() {
                         {dayEvs.map((ev, j) => {
                           const s = getEventStyle(ev.type);
                           const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
-                          return <div key={j} style={{ background: s.tagBg, color: s.tagColor, borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{t} {ev.title}</div>;
+                          return <div key={j} style={{ background: s.tagBg, color: s.tagColor, borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{role === 'Staff' ? ((ev.type !== 'Public') ? 'Busy' : ev.title) : `${t} ${ev.title}`}</div>;
                         })}
-                        {dayTsk.map((t, j) => (
+                        {role !== 'Staff' && dayTsk.map((t, j) => (
                           <div key={j} style={{ background: '#EDE9FE', color: '#5B21B6', borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>📌 {t.title}</div>
                         ))}
                       </div>
@@ -492,7 +500,7 @@ function Calendar() {
                       return (
                         <div key={i} style={S.upcomingItem}>
                           <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>{time}</div>
-                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{ev.title}</div>
+                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}> {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title} </div>
                           <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>
                           {canManage && (
                             <div style={{ display: 'flex', gap: '4px' }}>
@@ -503,7 +511,7 @@ function Calendar() {
                         </div>
                       );
                     })}
-                    {(tasksByDay[selectedDay] || []).map((t, i) => (
+                    {role !== 'Staff' && (tasksByDay[selectedDay] || []).map((t, i) => (
                       <div key={i} style={S.upcomingItem}>
                         <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>DL</div>
                         <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
@@ -533,12 +541,15 @@ function Calendar() {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid #F1F5F9', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
                     <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', width: '80px', flexShrink: 0 }}>{dateStr}</div>
                     <div style={{ fontSize: '10px', color: isTask ? '#8B5CF6' : '#1A3A6B', fontFamily: 'monospace', fontWeight: '700', width: '55px', flexShrink: 0 }}>{timeStr}</div>
-                    <div style={{ flex: 1, fontSize: '12px', fontWeight: '600', color: '#1E293B' }}>
-                      {isTask ? '📌 ' : '🗓 '}{isTask ? item.title : item.title}
-                    </div>
-                    <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
-                      {isTask ? (item.status || 'Pending') : item.type}
-                    </span>
+                   <div style={{ flex: 1, fontSize: '12px', fontWeight: '600', color: '#1E293B'    }}>
+                    {isTask ? '📌 ' : '🗓 '}
+                    {(role === 'Staff' && !isTask && item.type !== 'Public') ? 'Busy' : (isTask ? item.title : item.title)}
+                  </div>
+                  {role !== 'Staff' && (
+                  <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
+                    {isTask ? (item.status || 'Pending') : item.type}
+                  </span>
+                  )}
                     {!isTask && canManage && (
                       <button style={{ ...S.deleteBtn, padding: '6px 14px', fontSize: '12px' }} onClick={() => handleDeleteEvent(item.id)}>🗑 Delete</button>
                     )}
