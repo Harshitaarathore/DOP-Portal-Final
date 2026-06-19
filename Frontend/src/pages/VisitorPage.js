@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API from '../api';
 
 function VisitorPage() {
   const navigate = useNavigate();
@@ -10,18 +11,59 @@ function VisitorPage() {
   });
   const [submitted, setSubmitted] = useState(false);
 
-  const myAppointments = [
-    { id:1, purpose:'Industry Visit',   date:'25 May 2026', time:'04:30 PM', status:'Approved',  pass:'VIS-2026-001' },
-    { id:2, purpose:'Academic Meeting', date:'28 May 2026', time:'11:00 AM', status:'Pending',   pass:null },
-  ];
+  const [myAppointments, setMyAppointments] = useState([]);
+const [loadingAppointments, setLoadingAppointments] = useState(false);
+const [fetchError, setFetchError] = useState('');
+
+const fetchMyAppointments = async () => {
+  setLoadingAppointments(true);
+  setFetchError('');
+  try {
+    const res = await API.get('/visitors/my');
+    setMyAppointments(res.data.visitors || res.data || []);
+  } catch (err) {
+    setFetchError('Could not load your appointments. Please try again.');
+    setMyAppointments([]);
+  }
+  setLoadingAppointments(false);
+};
+
+useEffect(() => {
+  if (activeTab === 'appointments') {
+    fetchMyAppointments();
+  }
+}, [activeTab]);
 
   const stBg    = { Approved:'#DCFCE7', Pending:'#FEF3C7', Rejected:'#FEE2E2' };
   const stColor = { Approved:'#166534', Pending:'#92400E', Rejected:'#991B1B' };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-  };
+  const [submitError, setSubmitError] = useState('');
+const [submitting, setSubmitting] = useState(false);
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitError('');
+  setSubmitting(true);
+  try {
+    const res = await API.post('/visitors/request', {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      organization: form.organization,
+      purpose: form.purpose,
+      visit_date: form.date,
+      visit_time: form.time,
+    });
+    if (res.data.success !== false) {
+      setSubmitted(true);
+    } else {
+      setSubmitError('Submission failed. Please check your details and try again.');
+    }
+  } catch (err) {
+    setSubmitError(err.response?.data?.message || 'Something went wrong. Please try again.');
+  }
+  setSubmitting(false);
+};
 
   return (
     <div style={styles.page}>
@@ -34,7 +76,7 @@ function VisitorPage() {
             <div style={{...styles.badge, background:'#0EA5E9'}}>O</div>
           </div>
           <div>
-            <div style={styles.headerTitle}>DOP Portal — LNMIIT</div>
+            <div style={styles.headerTitle}>Director's Office Portal — LNMIIT</div>
             <div style={styles.headerSub}>Director's Office Visitor Portal</div>
           </div>
         </div>
@@ -143,8 +185,13 @@ function VisitorPage() {
                     Approval notification will be sent to your email within 1-2 working days.
                   </div>
 
-                  <button style={styles.submitBtn} type="submit">
-                    Submit Appointment Request →
+                  {submitError && (
+                    <div style={{ background:'#FEE2E2', border:'1px solid #FECACA', borderRadius:'8px', padding:'10px 14px', fontSize:'11px', color:'#991B1B', marginBottom:'14px' }}>
+                      ⚠️ {submitError}
+                    </div>
+                  )}
+                  <button style={{...styles.submitBtn, opacity: submitting ? 0.6 : 1}} type="submit" disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit Appointment Request →'}
                   </button>
                 </form>
               )}
@@ -159,7 +206,11 @@ function VisitorPage() {
               <span style={styles.cardTitle}>📅 My Appointments</span>
             </div>
             <div style={styles.cardBody}>
-              {myAppointments.length === 0 ? (
+              {loadingAppointments ? (
+                <div style={styles.noData}>Loading your appointments...</div>
+              ) : fetchError ? (
+                <div style={{...styles.noData, color:'#EF4444'}}>{fetchError}</div>
+              ) : myAppointments.length === 0 ? (
                 <div style={styles.noData}>No appointments found</div>
               ) : (
                 myAppointments.map((apt,i) => (
