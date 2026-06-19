@@ -47,7 +47,7 @@ function App() {
         <Route path="/requests"  element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Requests /></ProtectedRoute>} />
 
         {/* Secretary + Director */}
-        <Route path="/calendar"   element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Calendar /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute allowedRoles={['Secretary','Director','Staff','Faculty']}><Calendar /></ProtectedRoute>} />
         <Route path="/tasks"      element={<ProtectedRoute allowedRoles={['Secretary','Director','Staff','Faculty']}><Tasks /></ProtectedRoute>} />
         <Route path="/visitors"   element={<ProtectedRoute allowedRoles={['Secretary','Director']}><Visitors /></ProtectedRoute>} />
         <Route path="/documents"  element={<ProtectedRoute allowedRoles={['Secretary','Director','Staff','Faculty']}><Documents /></ProtectedRoute>} />

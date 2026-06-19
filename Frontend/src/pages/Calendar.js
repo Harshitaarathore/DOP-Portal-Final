@@ -148,18 +148,35 @@ const upcomingTasks = tasks
     ...tasks.filter(t=>t.deadline).map(t => ({ ...t, itemType:'task', sortDate: new Date(t.deadline) })),
   ].sort((a,b) => a.sortDate - b.sortDate);
 
-  const navItems = [
-    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
-    { label:'Calendar',      path:'/calendar',       icon:'📅' },
-    { label:'Requests',      path:'/requests',       icon:'📋' },
-    { label:'Documents',     path:'/documents',      icon:'📁' },
-    { label:'Visitors',      path:'/visitors',       icon:'👥' },
-    { label:'Communication', path:'/communications', icon:'💬' },
-    { label:'Tasks',         path:'/tasks',          icon:'✅' },
-    { label:'Announcements', path:'/announcements',  icon:'📢' },
-    { label:'Reports',       path:'/reports',        icon:'📊' },
-    { label:'Settings',      path:'/settings',       icon:'⚙️' },
-  ];
+  const navItems = role === 'Staff' ? [
+  { label:'Dashboard',       path:'/staff-portal?tab=dashboard',    icon:'🏠' },
+  { label:'Request Meeting', path:'/staff-portal?tab=request',      icon:'📋' },
+  { label:'My Requests',     path:'/staff-portal?tab=myrequests',   icon:'📌' },
+  { label:'Public Calendar', path:'/calendar',                      icon:'📅' },
+  { label:'Documents',       path:'/staff-portal?tab=documents',    icon:'📁' },
+  { label:'Visitor Request', path:'/staff-portal?tab=visitor',      icon:'👥' },
+  { label:'Announcements',   path:'/staff-portal?tab=announcements',icon:'📢' },
+  { label:'Settings',        path:'/staff-portal?tab=settings',     icon:'⚙️' },
+] : role === 'Faculty' ? [
+  { label:'Dashboard',     path:'/faculty-dashboard', icon:'🏠' },
+  { label:'My Requests',   path:'/faculty-requests',  icon:'📋' },
+  { label:'Calendar',      path:'/faculty-calendar',  icon:'📅' },
+  { label:'Tasks',         path:'/tasks',             icon:'✅' },
+  { label:'Documents',     path:'/documents',         icon:'📁' },
+  { label:'Announcements', path:'/announcements',     icon:'📢' },
+  { label:'Settings',      path:'/settings',          icon:'⚙️' },
+] : [
+  { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
+  { label:'Calendar',      path:'/calendar',       icon:'📅' },
+  { label:'Requests',      path:'/requests',       icon:'📋' },
+  { label:'Documents',     path:'/documents',      icon:'📁' },
+  { label:'Visitors',      path:'/visitors',       icon:'👥' },
+  { label:'Communication', path:'/communications', icon:'💬' },
+  { label:'Tasks',         path:'/tasks',          icon:'✅' },
+  { label:'Announcements', path:'/announcements',  icon:'📢' },
+  { label:'Reports',       path:'/reports',        icon:'📊' },
+  { label:'Settings',      path:'/settings',       icon:'⚙️' },
+];
 
   return (
   

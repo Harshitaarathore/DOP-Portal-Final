@@ -135,18 +135,35 @@ function Documents() {
     return '📁';
   };
 
-  const navItems = [
-    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
-    { label:'Calendar',      path:'/calendar',       icon:'📅' },
-    { label:'Requests',      path:'/requests',       icon:'📋' },
-    { label:'Documents',     path:'/documents',      icon:'📁' },
-    { label:'Visitors',      path:'/visitors',       icon:'👥' },
-    { label:'Communication', path:'/communications', icon:'💬' },
-    { label:'Tasks',         path:'/tasks',          icon:'✅' },
-    { label:'Announcements', path:'/announcements',  icon:'📢' },
-    { label:'Reports',       path:'/reports',        icon:'📊' },
-    { label:'Settings',      path:'/settings',       icon:'⚙️' },
-  ];
+  const navItems = role === 'Staff' ? [
+  { label:'Dashboard',       path:'/staff-portal',    icon:'🏠' },
+  { label:'Request Meeting', path:'/staff-portal',    icon:'📋' },
+  { label:'My Requests',     path:'/staff-portal',    icon:'📌' },
+  { label:'Public Calendar', path:'/calendar',        icon:'📅' },
+  { label:'Documents',       path:'/staff-portal',    icon:'📁' },
+  { label:'Visitor Request', path:'/staff-portal',    icon:'👥' },
+  { label:'Announcements',   path:'/staff-portal',    icon:'📢' },
+  { label:'Settings',        path:'/staff-portal',    icon:'⚙️' },
+] : role === 'Faculty' ? [
+  { label:'Dashboard',     path:'/faculty-dashboard', icon:'🏠' },
+  { label:'My Requests',   path:'/faculty-requests',  icon:'📋' },
+  { label:'Calendar',      path:'/faculty-calendar',  icon:'📅' },
+  { label:'Tasks',         path:'/tasks',             icon:'✅' },
+  { label:'Documents',     path:'/documents',         icon:'📁' },
+  { label:'Announcements', path:'/announcements',     icon:'📢' },
+  { label:'Settings',      path:'/settings',          icon:'⚙️' },
+] : [
+  { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
+  { label:'Calendar',      path:'/calendar',       icon:'📅' },
+  { label:'Requests',      path:'/requests',       icon:'📋' },
+  { label:'Documents',     path:'/documents',      icon:'📁' },
+  { label:'Visitors',      path:'/visitors',       icon:'👥' },
+  { label:'Communication', path:'/communications', icon:'💬' },
+  { label:'Tasks',         path:'/tasks',          icon:'✅' },
+  { label:'Announcements', path:'/announcements',  icon:'📢' },
+  { label:'Reports',       path:'/reports',        icon:'📊' },
+  { label:'Settings',      path:'/settings',       icon:'⚙️' },
+];
 
   const stats = [
     { label:'Total Docs',   num: documents.length,                                            bg:'#EFF6FF', color:'#1A3A6B' },
