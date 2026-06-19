@@ -316,7 +316,7 @@ useEffect(() => {
                   </div>
                   <div style={S.formGroup}>
                     <label style={S.label}>Preferred Date</label>
-                    <input style={S.input} type="date" value={newRequest.preferred_date} onChange={e => setNewRequest({ ...newRequest, preferred_date: e.target.value })} />
+                    <input style={S.input} type="date" min="2000-01-01" max="2099-12-31" value={newRequest.preferred_date} onChange={e => setNewRequest({ ...newRequest, preferred_date: e.target.value })} />
                   </div>
                   <div style={S.formGroup}>
                     <label style={S.label}>Preferred Time</label>
@@ -407,7 +407,7 @@ useEffect(() => {
                     </div>
                     <div style={S.formGroup}>
                       <label style={S.label}>Visit Date *</label>
-                      <input style={S.input} type="date" value={newVisitor.visit_date} onChange={e => setNewVisitor({ ...newVisitor, visit_date: e.target.value })} />
+                      <input style={S.input} type="date" min="2000-01-01" max="2099-12-31" value={newVisitor.visit_date} onChange={e => setNewVisitor({ ...newVisitor, visit_date: e.target.value })} />
                     </div>
                     <div style={S.formGroup}>
                       <label style={S.label}>Visit Time</label>
