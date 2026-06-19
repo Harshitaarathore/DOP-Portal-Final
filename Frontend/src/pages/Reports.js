@@ -33,7 +33,7 @@ function Reports() {
   const { count: notifCount } = useNotifCount();
 
   const navItems = [
-    { label:'Dashboard',     icon:'🏠', path:'/dashboard' },
+    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
     { label:'Calendar',      icon:'📅', path:'/calendar' },
     { label:'Requests',      icon:'📋', path:'/requests' },
     { label:'Documents',     icon:'📁', path:'/documents' },

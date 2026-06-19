@@ -38,7 +38,7 @@ function Tasks() {
   const showToast = (message, type = 'success') => setToast({ message, type });
 
   const navItems = [
-    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
     { label:'Calendar',      path:'/calendar',       icon:'📅' },
     { label:'Requests',      path:'/requests',       icon:'📋' },
     { label:'Documents',     path:'/documents',      icon:'📁' },

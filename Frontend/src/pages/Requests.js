@@ -72,7 +72,7 @@ function Requests() {
   const stColor  = { Pending: '#92400E', Approved: '#166534', Rejected: '#991B1B', Rescheduled: '#5B21B6' };
 
   const navItems = [
-    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
     { label:'Calendar',      path:'/calendar',       icon:'📅' },
     { label:'Requests',      path:'/requests',       icon:'📋' },
     { label:'Documents',     path:'/documents',      icon:'📁' },

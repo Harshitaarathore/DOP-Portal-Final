@@ -55,7 +55,7 @@ function Settings() {
   const canAdmin = role === 'Secretary' || role === 'Director';
 
   const navItems = [
-    { label:'Dashboard',     icon:'🏠', path:'/dashboard' },
+    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
     { label:'Calendar',      icon:'📅', path:'/calendar' },
     { label:'Requests',      icon:'📋', path:'/requests' },
     { label:'Documents',     icon:'📁', path:'/documents' },

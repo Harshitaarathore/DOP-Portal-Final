@@ -127,7 +127,7 @@ function Visitors() {
   const stColor = { Approved:'#166534', Pending:'#92400E', Rejected:'#991B1B' };
 
   const navItems = [
-    { label:'Dashboard',     path:'/dashboard',      icon:'🏠' },
+    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
     { label:'Calendar',      path:'/calendar',       icon:'📅' },
     { label:'Requests',      path:'/requests',       icon:'📋' },
     { label:'Documents',     path:'/documents',      icon:'📁' },
