@@ -152,7 +152,7 @@ const upcomingTasks = tasks
   { label:'Dashboard',       path:'/staff-portal?tab=dashboard',    icon:'🏠' },
   { label:'Request Meeting', path:'/staff-portal?tab=request',      icon:'📋' },
   { label:'My Requests',     path:'/staff-portal?tab=myrequests',   icon:'📌' },
-  { label:'Public Calendar', path:'/calendar',                      icon:'📅' },
+  { label:'Calendar',        path:'/calendar',                      icon:'📅' },
   { label:'Documents',       path:'/staff-portal?tab=documents',    icon:'📁' },
   { label:'Visitor Request', path:'/staff-portal?tab=visitor',      icon:'👥' },
   { label:'Announcements',   path:'/staff-portal?tab=announcements',icon:'📢' },
@@ -319,7 +319,7 @@ const upcomingTasks = tasks
                                 const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
                                 return (
                                   <div key={j} style={{ background: s.tagBg, color: s.tagColor, fontSize:'7px', fontWeight:'600', borderRadius:'3px', padding:'1px 3px', marginBottom:'1px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                                    {canManage ? `${t} ${ev.title}` : `${t} Busy`}
+                                    {ev.title}
                                   </div>
                                 );
                               })}
@@ -372,7 +372,7 @@ const upcomingTasks = tasks
       return (
         <div key={i} style={S.upcomingItem}>
           <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>{time}</div>
-          <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? ev.title : 'Busy'}</div>
+          <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{ev.title}</div>
           <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
           {canManage && (
             <div style={{ display:'flex', gap:'4px' }}>
@@ -411,7 +411,7 @@ const upcomingTasks = tasks
                       <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>
                         {new Date(u.start_time).toLocaleDateString('en-US', { day:'numeric', month:'short' })}
                       </div>
-                      <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? u.title : 'Busy'}</div>
+                      <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{ u.title}</div>
                       <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{u.type}</span>
                     </div>
                   );
@@ -466,7 +466,7 @@ const upcomingTasks = tasks
               {dayEvs.map((ev,j) => {
                 const s = getEventStyle(ev.type);
                 const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0,5) : ev.start_time.split(' ')[1]?.slice(0,5);
-                return <div key={j} style={{ background:s.tagBg, color:s.tagColor, borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{t} {canManage ? ev.title : 'Busy'}</div>;
+                return <div key={j} style={{ background:s.tagBg, color:s.tagColor, borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{t} {ev.title}</div>;
               })}
               {dayTsk.map((t,j) => (
                 <div key={j} style={{ background:'#EDE9FE', color:'#5B21B6', borderRadius:'3px', padding:'2px 4px', fontSize:'8px', marginBottom:'3px', fontWeight:'600', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>📌 {t.title}</div>
@@ -492,7 +492,7 @@ const upcomingTasks = tasks
             return (
               <div key={i} style={S.upcomingItem}>
                 <div style={{ fontSize:'10px', color:'#2563EB', fontWeight:'600', width:'48px', flexShrink:0 }}>{time}</div>
-                <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{canManage ? ev.title : 'Busy'}</div>
+                <div style={{ fontSize:'11px', fontWeight:'500', color:'#1E293B', flex:1 }}>{ev.title }</div>
                 <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>{ev.type}</span>
                 {canManage && (
                   <div style={{ display:'flex', gap:'4px' }}>
@@ -534,7 +534,7 @@ const upcomingTasks = tasks
                     <div style={{ fontSize:'10px', color:'#64748B', fontWeight:'600', width:'80px', flexShrink:0 }}>{dateStr}</div>
                     <div style={{ fontSize:'10px', color: isTask?'#8B5CF6':'#1A3A6B', fontFamily:'monospace', fontWeight:'700', width:'55px', flexShrink:0 }}>{timeStr}</div>
                     <div style={{ flex:1, fontSize:'12px', fontWeight:'600', color:'#1E293B' }}>
-                      {isTask ? '📌 ' : '🗓 '}{isTask ? item.title : (canManage ? item.title : 'Busy')}
+                      {isTask ? '📌 ' : '🗓 '}{isTask ? item.title :  item.title}
                     </div>
                     <span style={{ ...S.tag, background:s.tagBg, color:s.tagColor }}>
                       {isTask ? (item.status||'Pending') : item.type}
