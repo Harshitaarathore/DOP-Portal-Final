@@ -25,37 +25,70 @@ const submitVisitor = (req, res) => {
     return res.json({ success: false, message: 'Visit date cannot be in the past', data: null });
   }
 
-  // Check time clash
-  const clashSql = `SELECT * FROM visitors WHERE visit_date = ? AND visit_time = ? AND approval_status != 'Rejected'`;
-  db.query(clashSql, [visit_date, visit_time], (err, clashes) => {
-    if (err) return res.json({ success: false, message: err.message, data: null });
-    if (clashes.length > 0) {
-      return res.json({ 
-        success: false, 
-        message: `Time slot ${visit_time} on this date is already booked by "${clashes[0].name}". Please choose a different time.`, 
-        data: null 
-      });
-    }
+  // If this request came from a logged-in Staff user (token decoded by optionalAuth),
+  // look up their email and stamp it as invited_by. Public/no-login submissions
+  // (e.g. the external VisitorRegister page) have no req.user, so invited_by stays NULL.
+  const finishSubmit = (invited_by) => {
+    // Check time clash
+    const clashSql = `SELECT * FROM visitors WHERE visit_date = ? AND visit_time = ? AND approval_status != 'Rejected'`;
+    db.query(clashSql, [visit_date, visit_time], (err, clashes) => {
+      if (err) return res.json({ success: false, message: err.message, data: null });
+      if (clashes.length > 0) {
+        return res.json({ 
+          success: false, 
+          message: `Time slot ${visit_time} on this date is already booked by "${clashes[0].name}". Please choose a different time.`, 
+          data: null 
+        });
+      }
 
-    const id = uuidv4();
-    const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00'], (err2) => {
-      if (err2) return res.json({ success: false, message: err2.message, data: null });
-      
-      // Send notification to Secretary and Director
-      const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
-      db.query(`SELECT id FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`, (err3, users) => {
-        if (!err3 && users && users.length > 0) {
-          const visitDateStr = new Date(visit_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
-          users.forEach(u => {
-            db.query(notifSql, [uuidv4(), u.id, `👤 New Visitor Request: "${name}" from ${organization} on ${visitDateStr}`, 'visitor_added']);
-          });
-        }
+      const id = uuidv4();
+      const sql = `INSERT INTO visitors (id, name, email, organization, purpose, visit_date, visit_time, invited_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+      db.query(sql, [id, name, email || '', organization, purpose, visit_date, visit_time || '10:00', invited_by || null], (err2) => {
+        if (err2) return res.json({ success: false, message: err2.message, data: null });
+        
+        // Send notification to Secretary and Director
+        const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+        db.query(`SELECT id FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`, (err3, users) => {
+          if (!err3 && users && users.length > 0) {
+            const visitDateStr = new Date(visit_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+            users.forEach(u => {
+              db.query(notifSql, [uuidv4(), u.id, `👤 New Visitor Request: "${name}" from ${organization} on ${visitDateStr}`, 'visitor_added']);
+            });
+          }
+        });
+        
+        res.json({ success: true, message: 'Visitor request submitted', data: null });
       });
-      
-      res.json({ success: true, message: 'Visitor request submitted', data: null });
     });
-  });
+  };
+
+  if (req.user && req.user.id) {
+    // Logged-in caller (Staff, via JWT decoded by optionalAuth middleware) — look up their email
+    db.query(`SELECT email FROM users WHERE id = ?`, [req.user.id], (errLookup, rows) => {
+      if (errLookup || !rows.length) return finishSubmit(null);
+      finishSubmit(rows[0].email);
+    });
+  } else {
+    // No token — public submission (e.g. VisitorRegister page)
+    finishSubmit(null);
+  }
+};
+
+// GET MY VISITORS — for Staff: visitors they invited (invited_by). For Visitor role: their own appointments (matched by email).
+const getMyVisitors = (req, res) => {
+  if (req.user.role === 'Visitor') {
+    const sql = `SELECT * FROM visitors WHERE email = (SELECT email FROM users WHERE id = ?) ORDER BY visit_date DESC`;
+    db.query(sql, [req.user.id], (err, results) => {
+      if (err) return res.json({ success: false, message: err.message, data: null });
+      res.json({ success: true, message: 'Your appointments fetched', data: results });
+    });
+  } else {
+    const sql = `SELECT * FROM visitors WHERE invited_by = (SELECT email FROM users WHERE id = ?) ORDER BY visit_date DESC`;
+    db.query(sql, [req.user.id], (err, results) => {
+      if (err) return res.json({ success: false, message: err.message, data: null });
+      res.json({ success: true, message: 'Your invited visitors fetched', data: results });
+    });
+  }
 };
 
 // GET ALL VISITORS (Secretary)
@@ -168,4 +201,4 @@ const rejectVisitor = (req, res) => {
   });
 };
 
-module.exports = { submitVisitor, getTodayVisitors, approveVisitor, rejectVisitor };
+module.exports = { submitVisitor, getTodayVisitors, approveVisitor, rejectVisitor, getMyVisitors };

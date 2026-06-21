@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -12,58 +12,58 @@ function VisitorPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const [myAppointments, setMyAppointments] = useState([]);
-const [loadingAppointments, setLoadingAppointments] = useState(false);
-const [fetchError, setFetchError] = useState('');
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [fetchError, setFetchError] = useState('');
 
-const fetchMyAppointments = async () => {
-  setLoadingAppointments(true);
-  setFetchError('');
-  try {
-    const res = await API.get('/visitors/my');
-    setMyAppointments(res.data.visitors || res.data || []);
-  } catch (err) {
-    setFetchError('Could not load your appointments. Please try again.');
-    setMyAppointments([]);
-  }
-  setLoadingAppointments(false);
-};
+  const fetchMyAppointments = async () => {
+    setLoadingAppointments(true);
+    setFetchError('');
+    try {
+      const res = await API.get('/visitors/my');
+      if (res.data.success) setMyAppointments(res.data.data || []);
+      else { setFetchError(res.data.message || 'Could not load your appointments.'); setMyAppointments([]); }
+    } catch (err) {
+      setFetchError('Could not load your appointments. Please try again.');
+      setMyAppointments([]);
+    }
+    setLoadingAppointments(false);
+  };
 
-useEffect(() => {
-  if (activeTab === 'appointments') {
-    fetchMyAppointments();
-  }
-}, [activeTab]);
+  useEffect(() => {
+    if (activeTab === 'appointments') {
+      fetchMyAppointments();
+    }
+  }, [activeTab]);
 
   const stBg    = { Approved:'#DCFCE7', Pending:'#FEF3C7', Rejected:'#FEE2E2' };
   const stColor = { Approved:'#166534', Pending:'#92400E', Rejected:'#991B1B' };
 
   const [submitError, setSubmitError] = useState('');
-const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSubmitError('');
-  setSubmitting(true);
-  try {
-    const res = await API.post('/visitors/request', {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      organization: form.organization,
-      purpose: form.purpose,
-      visit_date: form.date,
-      visit_time: form.time,
-    });
-    if (res.data.success !== false) {
-      setSubmitted(true);
-    } else {
-      setSubmitError('Submission failed. Please check your details and try again.');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitting(true);
+    try {
+      const res = await API.post('/visitors/request', {
+        name: form.name,
+        email: form.email,
+        organization: form.organization,
+        purpose: form.purpose,
+        visit_date: form.date,
+        visit_time: form.time,
+      });
+      if (res.data.success) {
+        setSubmitted(true);
+      } else {
+        setSubmitError(res.data.message || 'Submission failed. Please check your details and try again.');
+      }
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || 'Something went wrong. Please try again.');
     }
-  } catch (err) {
-    setSubmitError(err.response?.data?.message || 'Something went wrong. Please try again.');
-  }
-  setSubmitting(false);
-};
+    setSubmitting(false);
+  };
 
   return (
     <div style={styles.page}>
@@ -148,9 +148,9 @@ const handleSubmit = async (e) => {
                         value={form.email} onChange={e => setForm({...form, email:e.target.value})} required />
                     </div>
                     <div>
-                      <label style={styles.label}>Phone Number *</label>
+                      <label style={styles.label}>Phone Number</label>
                       <input style={styles.input} placeholder="+91 XXXXX XXXXX"
-                        value={form.phone} onChange={e => setForm({...form, phone:e.target.value})} required />
+                        value={form.phone} onChange={e => setForm({...form, phone:e.target.value})} />
                     </div>
                     <div>
                       <label style={styles.label}>Organization *</label>
@@ -218,17 +218,19 @@ const handleSubmit = async (e) => {
                     <div style={styles.aptTop}>
                       <div>
                         <div style={styles.aptPurpose}>{apt.purpose}</div>
-                        <div style={styles.aptDate}>📅 {apt.date} &nbsp;|&nbsp; 🕐 {apt.time}</div>
+                        <div style={styles.aptDate}>
+                          📅 {apt.visit_date ? new Date(apt.visit_date).toLocaleDateString('en-IN') : 'N/A'}
+                          &nbsp;|&nbsp; 🕐 {apt.visit_time || 'N/A'}
+                        </div>
                       </div>
-                      <span style={{...styles.stBadge, background:stBg[apt.status], color:stColor[apt.status]}}>{apt.status}</span>
+                      <span style={{...styles.stBadge, background:stBg[apt.approval_status], color:stColor[apt.approval_status]}}>{apt.approval_status}</span>
                     </div>
-                    {apt.pass && (
+                    {apt.pass_generated ? (
                       <div style={styles.passBox}>
-                        🎫 Visitor Pass: <strong style={{color:'#1A3A6B'}}>{apt.pass}</strong>
-                        &nbsp;— Show this at the gate
+                        🎫 Visitor Pass Generated — Show this confirmation at the gate
                       </div>
-                    )}
-                    {apt.status === 'Pending' && (
+                    ) : null}
+                    {apt.approval_status === 'Pending' && (
                       <div style={styles.pendingNote}>
                         ⏳ Your request is under review. You will receive an email once approved.
                       </div>

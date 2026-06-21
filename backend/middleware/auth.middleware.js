@@ -17,4 +17,13 @@ const verifyToken = (req, res, next) => {
   });
 };
 
-module.exports = { verifyToken };
+const optionalAuth = (req, res, next) => {
+  const token = req.headers['authorization'];
+  if (!token) return next();
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (!err) req.user = decoded;
+    next();
+  });
+};
+
+module.exports = { verifyToken, optionalAuth };
