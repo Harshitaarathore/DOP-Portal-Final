@@ -19,11 +19,18 @@ function Calendar() {
   const [hoveredNav, setHoveredNav] = useState(null);
   const { count: notifCount } = useNotifCount();
 
+  const [reschedulingId, setReschedulingId] = useState(null);
+  const [rescheduleForm, setRescheduleForm] = useState({ start_time: '', end_time: '' });
+  const [rescheduleError, setRescheduleError] = useState('');
+
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
   const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
   const canManage = role === 'Secretary' || role === 'Director';
+
+  // Any non-managing role (Staff, Faculty, etc.) is a restricted viewer
+  const isRestrictedViewer = !canManage;
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -75,16 +82,83 @@ function Calendar() {
     } catch { alert('Failed to delete'); }
   };
 
+  // Helper: extract HH:mm from a datetime string (ISO or "YYYY-MM-DD HH:mm:ss")
+  const getTime = (val) => {
+    if (!val) return '';
+    return val.includes('T') ? val.split('T')[1].slice(0, 5) : val.split(' ')[1]?.slice(0, 5) ?? '';
+  };
+
+  // Helper: format time range "HH:mm – HH:mm"
+  const getTimeRange = (start, end) => {
+    const s = getTime(start);
+    const e = getTime(end);
+    if (!s) return '';
+    if (!e) return s;
+    return `${s} – ${e}`;
+  };
+
+  const toLocalInputValue = (val) => {
+    if (!val) return '';
+    const d = new Date(val.includes('T') ? val : val.replace(' ', 'T'));
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const openReschedule = (ev) => {
+    setReschedulingId(ev.id);
+    setRescheduleError('');
+    setRescheduleForm({
+      start_time: toLocalInputValue(ev.start_time),
+      end_time: toLocalInputValue(ev.end_time),
+    });
+  };
+
+  const cancelReschedule = () => {
+    setReschedulingId(null);
+    setRescheduleError('');
+    setRescheduleForm({ start_time: '', end_time: '' });
+  };
+
+  const submitReschedule = async (ev) => {
+    setRescheduleError('');
+    if (!rescheduleForm.start_time || !rescheduleForm.end_time) {
+      setRescheduleError('Both start and end time are required');
+      return;
+    }
+    if (rescheduleForm.start_time >= rescheduleForm.end_time) {
+      setRescheduleError('End time must be after start time');
+      return;
+    }
+    try {
+      const res = await API.put(`/events/${ev.id}`, {
+        ...ev,
+        start_time: rescheduleForm.start_time,
+        end_time: rescheduleForm.end_time,
+      });
+      if (res.data.success) {
+        cancelReschedule();
+        fetchEvents();
+      } else {
+        setRescheduleError(res.data.message || 'Failed to reschedule');
+      }
+    } catch {
+      setRescheduleError('Failed to reschedule');
+    }
+  };
+
   const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
-  // Color coding per SRS + extras
   const getEventStyle = (type) => {
     if (type === 'Confidential') return { dot: '#EF4444', tagBg: '#FEE2E2', tagColor: '#991B1B', bar: '#EF4444' };
     if (type === 'Internal') return { dot: '#F59E0B', tagBg: '#FEF3C7', tagColor: '#92400E', bar: '#F59E0B' };
     return { dot: '#22C55E', tagBg: '#DCFCE7', tagColor: '#166534', bar: '#22C55E' };
   };
+
+  // Style used for "Busy" blocks shown to restricted viewers
+  const busyStyle = { tagBg: '#F1F5F9', tagColor: '#475569' };
+
   const taskStyle = { dot: '#8B5CF6', tagBg: '#EDE9FE', tagColor: '#5B21B6', bar: '#8B5CF6' };
-  const visitorStyle = { dot: '#F97316', tagBg: '#FFEDD5', tagColor: '#9A3412', bar: '#F97316' };
 
   // Calendar helpers
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -120,7 +194,6 @@ function Calendar() {
 
   const selectedDayEvents = eventsByDay[selectedDay] || [];
   const selectedDayTasks = tasksByDay[selectedDay] || [];
-  const nowDate = new Date();
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
@@ -143,10 +216,10 @@ function Calendar() {
   };
   const weekDays = getWeekDays();
 
-const allItems = [
-  ...events.map(e => ({ ...e, itemType: 'event', sortDate: new Date(e.start_time) })),
-  ...(role !== 'Staff' ? tasks.filter(t => t.deadline).map(t => ({ ...t, itemType: 'task', sortDate: new Date(t.deadline) })) : []),
-].sort((a, b) => a.sortDate - b.sortDate);
+  const allItems = [
+    ...events.map(e => ({ ...e, itemType: 'event', sortDate: new Date(e.start_time) })),
+    ...(role !== 'Staff' ? tasks.filter(t => t.deadline).map(t => ({ ...t, itemType: 'task', sortDate: new Date(t.deadline) })) : []),
+  ].sort((a, b) => a.sortDate - b.sortDate);
 
   const navItems = role === 'Staff' ? [
     { label: 'Dashboard', path: '/staff-portal?tab=dashboard', icon: '🏠' },
@@ -178,8 +251,32 @@ const allItems = [
     { label: 'Settings', path: '/settings', icon: '⚙️' },
   ];
 
-  return (
+  // Inline reschedule form — only rendered for canManage users
+  const RescheduleForm = ({ ev }) => (
+    <div style={S.rescheduleBox} onClick={(e) => e.stopPropagation()}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <input
+          style={{ ...S.input, flex: 1, minWidth: '160px' }}
+          type="datetime-local"
+          value={rescheduleForm.start_time}
+          onChange={e => setRescheduleForm({ ...rescheduleForm, start_time: e.target.value })}
+        />
+        <input
+          style={{ ...S.input, flex: 1, minWidth: '160px' }}
+          type="datetime-local"
+          value={rescheduleForm.end_time}
+          onChange={e => setRescheduleForm({ ...rescheduleForm, end_time: e.target.value })}
+        />
+      </div>
+      {rescheduleError && <div style={{ ...S.errorMsg, marginTop: '6px' }}>⚠️ {rescheduleError}</div>}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+        <button style={S.editBtn} onClick={() => submitReschedule(ev)}>✅ Confirm</button>
+        <button style={S.deleteBtn} onClick={cancelReschedule}>✖ Cancel</button>
+      </div>
+    </div>
+  );
 
+  return (
     <div style={S.page} className="page-transition">
 
       {/* SIDEBAR */}
@@ -221,7 +318,6 @@ const allItems = [
             <div style={S.notifWrap} onClick={() => navigate('/notifications')}>🔔
               {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
             </div>
-            {/* <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button> */}
             <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
         </div>
@@ -275,7 +371,7 @@ const allItems = [
             </div>
           )}
 
-          {/* MONTH VIEW */}
+          {/* ───────────────────── MONTH VIEW ───────────────────── */}
           {viewMode === 'month' && (
             <div style={S.calLayout}>
 
@@ -312,14 +408,15 @@ const allItems = [
                         {day && (
                           <>
                             <span style={{ fontSize: '11px', fontWeight: isToday ? '800' : '600', color: isToday ? '#2563EB' : '#1E293B' }}>{day}</span>
-                            {/* Event/task dots + labels */}
                             <div style={{ width: '100%', padding: '0 2px', marginTop: '2px' }}>
                               {dayEvs.slice(0, 2).map((ev, j) => {
-                                const s = getEventStyle(ev.type);
-                                const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
+                                const isNonPublic = ev.type !== 'Public';
+                                const showBusy = isRestrictedViewer && isNonPublic;
+                                const s = showBusy ? busyStyle : getEventStyle(ev.type);
+                                const timeRange = getTimeRange(ev.start_time, ev.end_time);
                                 return (
                                   <div key={j} style={{ background: s.tagBg, color: s.tagColor, fontSize: '7px', fontWeight: '600', borderRadius: '3px', padding: '1px 3px', marginBottom: '1px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                                    {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title}
+                                    {showBusy ? `🔒 Busy ${timeRange}` : `${timeRange} ${ev.title}`}
                                   </div>
                                 );
                               })}
@@ -345,7 +442,7 @@ const allItems = [
                     {[
                       { label: 'Confidential', bg: '#FEE2E2', color: '#991B1B' },
                       { label: 'Internal', bg: '#FEF3C7', color: '#92400E' },
-                      { label: 'Public', bg: '#DCFCE7', color: '166534' },
+                      { label: 'Public', bg: '#DCFCE7', color: '#166534' },
                       { label: 'Task', bg: '#EDE9FE', color: '#5B21B6' },
                     ].map((l, i) => (
                       <div key={i} style={S.legendItem}>
@@ -367,21 +464,36 @@ const allItems = [
                   <>
                     <div style={S.sectionLabel}>🗓 Events</div>
                     {selectedDayEvents.map((ev, i) => {
-                      const s = getEventStyle(ev.type);
-                      const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
+                      const isNonPublic = ev.type !== 'Public';
+                      const showBusy = isRestrictedViewer && isNonPublic;
+                      const s = showBusy ? busyStyle : getEventStyle(ev.type);
+                      const timeRange = getTimeRange(ev.start_time, ev.end_time);
                       return (
-                        <div key={i} style={S.upcomingItem}>
-                          <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>{time}</div>
-                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
-                            {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title}
-                          </div>
-                          {role !== 'Staff' && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>}
-                          {canManage && (
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
-                              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={S.upcomingItem}>
+                            {/* Time range (from–to) */}
+                            <div style={{ fontSize: '10px', color: showBusy ? '#64748B' : '#2563EB', fontWeight: '600', width: '80px', flexShrink: 0 }}>
+                              {timeRange}
                             </div>
-                          )}
+                            <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
+                              {showBusy ? '🔒 Busy' : ev.title}
+                            </div>
+                            {/* Tag: show type for managers; hide entirely for restricted viewers on non-public */}
+                            {!showBusy && (
+                              <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
+                                {ev.type}
+                              </span>
+                            )}
+                            {/* Reschedule / edit / delete — only for canManage */}
+                            {canManage && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
+                                <button style={S.editBtn} onClick={() => openReschedule(ev)}>📅</button>
+                                <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                              </div>
+                            )}
+                          </div>
+                          {canManage && reschedulingId === ev.id && <RescheduleForm ev={ev} />}
                         </div>
                       );
                     })}
@@ -393,7 +505,7 @@ const allItems = [
                     <div style={{ ...S.sectionLabel, background: '#EDE9FE', color: '#5B21B6' }}>📌 Task Deadlines</div>
                     {selectedDayTasks.map((t, i) => (
                       <div key={i} style={S.upcomingItem}>
-                        <div style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>DL</div>
+                        <div style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: '600', width: '80px', flexShrink: 0 }}>Deadline</div>
                         <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
                         <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
                       </div>
@@ -407,16 +519,20 @@ const allItems = [
 
                 <div style={S.upcomingTitle}>🔔 Upcoming Events</div>
                 {upcoming.length === 0 ? <div style={S.empty}>No upcoming events</div> : upcoming.map((u, i) => {
-                  const s = getEventStyle(u.type);
+                  const isNonPublic = u.type !== 'Public';
+                  const showBusy = isRestrictedViewer && isNonPublic;
+                  const s = showBusy ? busyStyle : getEventStyle(u.type);
+                  const timeRange = getTimeRange(u.start_time, u.end_time);
                   return (
                     <div key={i} style={S.upcomingItem}>
-                      <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>
+                      <div style={{ fontSize: '10px', color: showBusy ? '#64748B' : '#2563EB', fontWeight: '600', width: '80px', flexShrink: 0 }}>
                         {new Date(u.start_time).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                        {timeRange && <div style={{ fontWeight: '500', color: '#94A3B8' }}>{timeRange}</div>}
                       </div>
                       <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
-                        {(role === 'Staff' && u.type !== 'Public') ? 'Busy' : u.title}
+                        {showBusy ? '🔒 Busy' : u.title}
                       </div>
-                      {role !== 'Staff' && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{u.type}</span>}
+                      {!showBusy && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{u.type}</span>}
                     </div>
                   );
                 })}
@@ -426,12 +542,12 @@ const allItems = [
                     <div style={{ ...S.upcomingTitle, color: '#5B21B6' }}>📌 Upcoming Deadlines</div>
                     {upcomingTasks.length === 0 ? <div style={S.empty}>No upcoming deadlines</div> : upcomingTasks.map((t, i) => (
                       <div key={i} style={S.upcomingItem}>
-                        <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '80px', flexShrink: 0 }}>
                           {new Date(t.deadline).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                         </div>
-                      <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
-                      <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
-                    </div>
+                        <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
+                        <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
+                      </div>
                     ))}
                   </>
                 )}
@@ -439,7 +555,7 @@ const allItems = [
             </div>
           )}
 
-          {/* WEEK VIEW */}
+          {/* ───────────────────── WEEK VIEW ───────────────────── */}
           {viewMode === 'week' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={S.calCard}>
@@ -472,9 +588,15 @@ const allItems = [
                           <span style={{ fontSize: '15px' }}>{d}</span>
                         </div>
                         {dayEvs.map((ev, j) => {
-                          const s = getEventStyle(ev.type);
-                          const t = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
-                          return <div key={j} style={{ background: s.tagBg, color: s.tagColor, borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{role === 'Staff' ? ((ev.type !== 'Public') ? 'Busy' : ev.title) : `${t} ${ev.title}`}</div>;
+                          const isNonPublic = ev.type !== 'Public';
+                          const showBusy = isRestrictedViewer && isNonPublic;
+                          const s = showBusy ? busyStyle : getEventStyle(ev.type);
+                          const timeRange = getTimeRange(ev.start_time, ev.end_time);
+                          return (
+                            <div key={j} style={{ background: s.tagBg, color: s.tagColor, borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              {showBusy ? `🔒 Busy ${timeRange}` : `${timeRange} ${ev.title}`}
+                            </div>
+                          );
                         })}
                         {role !== 'Staff' && dayTsk.map((t, j) => (
                           <div key={j} style={{ background: '#EDE9FE', color: '#5B21B6', borderRadius: '3px', padding: '2px 4px', fontSize: '8px', marginBottom: '3px', fontWeight: '600', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>📌 {t.title}</div>
@@ -485,7 +607,7 @@ const allItems = [
                 </div>
               </div>
 
-              {/* WEEK DETAIL PANEL — same as month right panel */}
+              {/* WEEK DETAIL PANEL */}
               <div style={{ ...S.calCard, padding: '14px' }}>
                 <div style={S.panelTitle}>
                   {currentMonth.toLocaleString('default', { month: 'long' })} {selectedDay}, {currentMonth.getFullYear()}
@@ -495,25 +617,35 @@ const allItems = [
                 ) : (
                   <>
                     {(eventsByDay[selectedDay] || []).map((ev, i) => {
-                      const s = getEventStyle(ev.type);
-                      const time = ev.start_time.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time.split(' ')[1]?.slice(0, 5);
+                      const isNonPublic = ev.type !== 'Public';
+                      const showBusy = isRestrictedViewer && isNonPublic;
+                      const s = showBusy ? busyStyle : getEventStyle(ev.type);
+                      const timeRange = getTimeRange(ev.start_time, ev.end_time);
                       return (
-                        <div key={i} style={S.upcomingItem}>
-                          <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '48px', flexShrink: 0 }}>{time}</div>
-                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}> {(role === 'Staff' && ev.type !== 'Public') ? 'Busy' : ev.title} </div>
-                          <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>
-                          {canManage && (
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
-                              <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={S.upcomingItem}>
+                            <div style={{ fontSize: '10px', color: showBusy ? '#64748B' : '#2563EB', fontWeight: '600', width: '80px', flexShrink: 0 }}>
+                              {timeRange}
                             </div>
-                          )}
+                            <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
+                              {showBusy ? '🔒 Busy' : ev.title}
+                            </div>
+                            {!showBusy && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>}
+                            {canManage && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
+                                <button style={S.editBtn} onClick={() => openReschedule(ev)}>📅</button>
+                                <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                              </div>
+                            )}
+                          </div>
+                          {canManage && reschedulingId === ev.id && <RescheduleForm ev={ev} />}
                         </div>
                       );
                     })}
                     {role !== 'Staff' && (tasksByDay[selectedDay] || []).map((t, i) => (
                       <div key={i} style={S.upcomingItem}>
-                        <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '48px', flexShrink: 0 }}>DL</div>
+                        <div style={{ fontSize: '10px', color: '#8B5CF6', fontWeight: '600', width: '80px', flexShrink: 0 }}>Deadline</div>
                         <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>{t.title}</div>
                         <span style={{ ...S.tag, background: '#EDE9FE', color: '#5B21B6' }}>{t.status}</span>
                       </div>
@@ -524,7 +656,7 @@ const allItems = [
             </div>
           )}
 
-          {/* LIST VIEW */}
+          {/* ───────────────────── LIST VIEW ───────────────────── */}
           {viewMode === 'list' && (
             <div style={S.calCard}>
               <div style={S.monthNav}>
@@ -532,26 +664,40 @@ const allItems = [
               </div>
               {loading ? <div style={S.empty}>Loading...</div> : allItems.length === 0 ? <div style={S.empty}>No events or tasks found</div> : allItems.map((item, i) => {
                 const isTask = item.itemType === 'task';
-                const s = isTask ? taskStyle : getEventStyle(item.type);
+                const isNonPublic = !isTask && item.type !== 'Public';
+                const showBusy = isRestrictedViewer && isNonPublic;
+                const s = isTask ? taskStyle : (showBusy ? busyStyle : getEventStyle(item.type));
                 const dateStr = isTask
                   ? new Date(item.deadline).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
                   : new Date(item.start_time).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
-                const timeStr = isTask ? 'Deadline' : (item.start_time.includes('T') ? item.start_time.split('T')[1].slice(0, 5) : item.start_time.split(' ')[1]?.slice(0, 5));
+                const timeStr = isTask ? 'Deadline' : getTimeRange(item.start_time, item.end_time);
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid #F1F5F9', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
-                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', width: '80px', flexShrink: 0 }}>{dateStr}</div>
-                    <div style={{ fontSize: '10px', color: isTask ? '#8B5CF6' : '#1A3A6B', fontFamily: 'monospace', fontWeight: '700', width: '55px', flexShrink: 0 }}>{timeStr}</div>
-                   <div style={{ flex: 1, fontSize: '12px', fontWeight: '600', color: '#1E293B'    }}>
-                    {isTask ? '📌 ' : '🗓 '}
-                    {(role === 'Staff' && !isTask && item.type !== 'Public') ? 'Busy' : (isTask ? item.title : item.title)}
-                  </div>
-                  {role !== 'Staff' && (
-                  <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
-                    {isTask ? (item.status || 'Pending') : item.type}
-                  </span>
-                  )}
-                    {!isTask && canManage && (
-                      <button style={{ ...S.deleteBtn, padding: '6px 14px', fontSize: '12px' }} onClick={() => handleDeleteEvent(item.id)}>🗑 Delete</button>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid #F1F5F9', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px' }}>
+                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', width: '80px', flexShrink: 0 }}>{dateStr}</div>
+                      <div style={{ fontSize: '10px', color: isTask ? '#8B5CF6' : (showBusy ? '#64748B' : '#1A3A6B'), fontFamily: 'monospace', fontWeight: '700', width: '90px', flexShrink: 0 }}>{timeStr}</div>
+                      <div style={{ flex: 1, fontSize: '12px', fontWeight: '600', color: '#1E293B' }}>
+                        {isTask ? '📌 ' : (showBusy ? '🔒 ' : '🗓 ')}
+                        {showBusy ? 'Busy' : item.title}
+                      </div>
+                      {/* Tag: hidden for restricted viewers on non-public events */}
+                      {!showBusy && (
+                        <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
+                          {isTask ? (item.status || 'Pending') : item.type}
+                        </span>
+                      )}
+                      {/* Reschedule / delete — only for canManage, only for events */}
+                      {!isTask && canManage && (
+                        <>
+                          <button style={{ ...S.editBtn, padding: '6px 14px', fontSize: '12px' }} onClick={() => openReschedule(item)}>📅 Reschedule</button>
+                          <button style={{ ...S.deleteBtn, padding: '6px 14px', fontSize: '12px' }} onClick={() => handleDeleteEvent(item.id)}>🗑 Delete</button>
+                        </>
+                      )}
+                    </div>
+                    {!isTask && canManage && reschedulingId === item.id && (
+                      <div style={{ padding: '0 14px 10px' }}>
+                        <RescheduleForm ev={item} />
+                      </div>
                     )}
                   </div>
                 );
@@ -562,7 +708,6 @@ const allItems = [
         </div>
       </div>
     </div>
-
   );
 }
 
@@ -588,7 +733,6 @@ const S = {
   topbarRight: { display: 'flex', alignItems: 'center', gap: '8px' },
   notifBadge: { position: 'absolute', top: '-5px', right: '-5px', background: '#EF4444', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '8px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   notifWrap: { position: 'relative', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '6px 10px', color: '#1A3A6B', fontSize: '14px', cursor: 'pointer' },
-  btnOutline: { background: 'transparent', color: '#1A3A6B', border: '1px solid #1A3A6B', borderRadius: '4px', padding: '7px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   btnLogout: { background: '#DC2626', color: '#fff', border: 'none', borderRadius: '4px', padding: '7px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   content: { flex: 1, overflowY: 'auto', padding: '16px 20px' },
   pageHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' },
@@ -616,13 +760,13 @@ const S = {
   eventsPanel: { background: '#fff', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflowY: 'auto', maxHeight: 'calc(100vh - 180px)' },
   panelTitle: { fontSize: '13px', fontWeight: '700', color: '#1E293B', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' },
   sectionLabel: { display: 'inline-block', fontSize: '10px', fontWeight: '700', color: '#1E40AF', background: '#DBEAFE', padding: '3px 10px', borderRadius: '6px', marginBottom: '8px' },
-  eventCard: { padding: '10px 12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '8px' },
   tag: { fontSize: '10px', fontWeight: '600', padding: '3px 10px', borderRadius: '12px' },
   editBtn: { background: '#DBEAFE', color: '#1E40AF', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '10px', cursor: 'pointer', fontWeight: '600' },
   deleteBtn: { background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '10px', cursor: 'pointer', fontWeight: '600' },
   empty: { fontSize: '11px', color: '#94A3B8', textAlign: 'center', padding: '16px 0' },
   upcomingTitle: { fontSize: '11px', fontWeight: '700', color: '#1E293B', margin: '14px 0 8px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' },
   upcomingItem: { display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 0', borderBottom: '1px solid #F8FAFC' },
+  rescheduleBox: { background: '#F8FAFC', border: '1px dashed #94A3B8', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' },
 };
 
 export default Calendar;
