@@ -461,45 +461,29 @@ function Calendar() {
                   {currentMonth.toLocaleString('default', { month: 'long' })} {selectedDay}, {currentMonth.getFullYear()}
                 </div>
 
-                {selectedDayEvents.length > 0 && (
-                  <>
-                    <div style={S.sectionLabel}>🗓 Events</div>
-                    {selectedDayEvents.map((ev, i) => {
-                      const isNonPublic = ev.type !== 'Public';
-                      const showBusy = isRestrictedViewer && isNonPublic;
-                      const s = showBusy ? busyStyle : getEventStyle(ev.type);
-                      const timeRange = getTimeRange(ev.start_time, ev.end_time);
-                      return (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column' }}>
-                          <div style={S.upcomingItem}>
-                            {/* Time range (from–to) */}
-                            <div style={{ fontSize: '10px', color: showBusy ? '#64748B' : '#2563EB', fontWeight: '600', width: '80px', flexShrink: 0 }}>
-                              {timeRange}
-                            </div>
-                            <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
-                              {showBusy ? '🔒 Busy' : ev.title}
-                            </div>
-                            {/* Tag: show type for managers; hide entirely for restricted viewers on non-public */}
-                            {!showBusy && (
-                              <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>
-                                {ev.type}
-                              </span>
-                            )}
-                            {/* Reschedule / edit / delete — only for canManage */}
-                            {canManage && (
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
-                                <button style={S.editBtn} onClick={() => openReschedule(ev)}>📅</button>
-                                <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
-                              </div>
-                            )}
-                          </div>
-                          {canManage && reschedulingId === ev.id && <RescheduleForm ev={ev} />}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
+                {selectedDayEvents.map((ev, i) => {
+                  const s = getEventStyle(ev.type);
+                  const isHidden = role === 'Staff' && ev.type !== 'Public';
+                  const startTime = ev.start_time?.includes('T') ? ev.start_time.split('T')[1].slice(0, 5) : ev.start_time?.split(' ')[1]?.slice(0, 5);
+                  const endTime = ev.end_time?.includes('T') ? ev.end_time.split('T')[1].slice(0, 5) : ev.end_time?.split(' ')[1]?.slice(0, 5);
+                  return (
+                    <div key={i} style={S.upcomingItem}>
+                      <div style={{ fontSize: '10px', color: '#2563EB', fontWeight: '600', width: '80px', flexShrink: 0 }}>
+                        {startTime}{endTime ? ` – ${endTime}` : ''}
+                      </div>
+                      <div style={{ fontSize: '11px', fontWeight: '500', color: '#1E293B', flex: 1 }}>
+                        {isHidden ? 'Busy' : ev.title}
+                      </div>
+                      {!isHidden && role !== 'Staff' && <span style={{ ...S.tag, background: s.tagBg, color: s.tagColor }}>{ev.type}</span>}
+                      {canManage && !isHidden && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button style={S.editBtn} onClick={() => { const t = prompt('Edit title:', ev.title); if (t) API.put(`/events/${ev.id}`, { ...ev, title: t }).then(fetchEvents); }}>✏️</button>
+                        <button style={S.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>🗑</button>
+                      </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {role !== 'Staff' && selectedDayTasks.length > 0 && (
                   <>

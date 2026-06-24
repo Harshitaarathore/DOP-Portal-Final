@@ -20,6 +20,12 @@ function Requests() {
   const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
 
+  //handle_request
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState({ date: '', time: '' });
+
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   useEffect(() => { fetchRequests(); }, []);
@@ -49,29 +55,35 @@ function Requests() {
     } catch { alert('Failed to approve'); }
   };
 
-  const handleReject = async (id) => {
-    try {
-      const res = await API.put(`/meetings/${id}/reject`);
-      if (res.data.success) { alert('Request rejected!'); fetchRequests(); setSelectedRequest(null); }
-    } catch { alert('Failed to reject'); }
-  };
+const handleReject = async (id) => {
+  if (!rejectReason.trim()) { alert('Please provide a reason for rejection'); return; }
+  try {
+    const res = await API.put(`/meetings/${id}/reject`, { reason: rejectReason });
+    if (res.data.success) {
+      alert('Request rejected and email sent to requester');
+      setShowRejectForm(false);
+      setRejectReason('');
+      fetchRequests();
+      setSelectedRequest(null);
+    }
+  } catch { alert('Failed to reject'); }
+};
 
-  const handleReschedule = async (id) => {
-    if (!rescheduleForm.date || !rescheduleForm.time) { alert('Please pick a new date and time'); return; }
-    try {
-      const res = await API.put(`/meetings/${id}/reschedule`, {
-        preferred_date: rescheduleForm.date,
-        preferred_time: rescheduleForm.time,
-      });
-      if (res.data.success) {
-        alert('Request rescheduled!');
-        setShowReschedule(false);
-        setRescheduleForm({ date:'', time:'' });
-        fetchRequests();
-        setSelectedRequest(null);
-      } else { alert(res.data.message || 'Failed to reschedule'); }
-    } catch { alert('Failed to reschedule'); }
-  };
+const handleReschedule = async (id) => {
+  if (!rescheduleData.date || !rescheduleData.time) { alert('New date and time required'); return; }
+  try {
+    const res = await API.put(`/meetings/${id}/reschedule`, { preferred_date: rescheduleData.date, preferred_time: rescheduleData.time });
+    if (res.data.success) {
+      alert('Request rescheduled and email sent to requester');
+      setShowRescheduleForm(false);
+      setRescheduleData({ date: '', time: '' });
+      fetchRequests();
+      setSelectedRequest(null);
+    }
+  } catch { alert('Failed to reschedule'); }
+};
+
+
 
   const handleSaveNotes = async (id) => {
     try {
@@ -290,42 +302,58 @@ function Requests() {
                       </div>
                     )}
                   </div>
-                  {/* APPROVE/REJECT/RESCHEDULE - Secretary (primary) + Director (override) per SRS §5.4 */}
-{selectedRequest.status === 'Pending' && (role === 'Secretary' || role === 'Director') && (
+                  {/* Secretary: full actions */}
+{selectedRequest.status === 'Pending' && role === 'Secretary' && (
   <div style={S.actionNote}>
-    {role === 'Director' && (
-      <div style={S.noteBox}>
-        ℹ️ The <strong>Secretary</strong> typically handles approvals. You may override below.
-      </div>
-    )}
-    <div style={{ display: 'flex', gap: '10px', marginTop: role === 'Director' ? '8px' : '16px' }}>
+    <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
       <button style={S.approveBtn} onClick={() => handleApprove(selectedRequest.id)}>✓ Approve</button>
-      <button style={S.rejectBtn} onClick={() => handleReject(selectedRequest.id)}>✗ Reject</button>
-      <button style={{ ...S.forwardBtn, flex:1, background:'#7C3AED' }} onClick={() => setShowReschedule(!showReschedule)}>
-        🕒 Reschedule
-      </button>
+      <button style={{ ...S.rejectBtn, flex: 0.8 }} onClick={() => { setShowRejectForm(!showRejectForm); setShowRescheduleForm(false); }}>✗ Reject</button>
+      <button style={{ ...S.rejectBtn, background: '#1A3A6B', flex: 0.8 }} onClick={() => { setShowRescheduleForm(!showRescheduleForm); setShowRejectForm(false); }}>🔄 Reschedule</button>
     </div>
-    {showReschedule && (
-      <div style={{ marginTop:'12px', padding:'12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0' }}>
-        <div style={{ display:'flex', gap:'8px', marginBottom:'10px' }}>
-          <input
-            type="date"
-            style={{ flex:1, border:'1px solid #E2E8F0', borderRadius:'6px', padding:'8px 10px', fontSize:'11px', outline:'none', boxSizing:'border-box' }}
-            value={rescheduleForm.date}
-            onChange={e => setRescheduleForm({ ...rescheduleForm, date:e.target.value })}
-          />
-          <input
-            type="time"
-            style={{ flex:1, border:'1px solid #E2E8F0', borderRadius:'6px', padding:'8px 10px', fontSize:'11px', outline:'none', boxSizing:'border-box' }}
-            value={rescheduleForm.time}
-            onChange={e => setRescheduleForm({ ...rescheduleForm, time:e.target.value })}
-          />
+
+    {showRejectForm && (
+      <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '12px', marginTop: '10px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', marginBottom: '6px' }}>Reason for Rejection *</div>
+        <textarea style={{ width: '100%', border: '1px solid #FECACA', borderRadius: '6px', padding: '8px', fontSize: '11px', resize: 'vertical', height: '60px', outline: 'none', boxSizing: 'border-box' }}
+          placeholder="Will be emailed to requester" value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <button style={{ ...S.rejectBtn, flex: 1 }} onClick={() => handleReject(selectedRequest.id)}>Confirm Reject</button>
+          <button style={{ ...S.rejectBtn, background: '#64748B', flex: 0.5 }} onClick={() => { setShowRejectForm(false); setRejectReason(''); }}>Cancel</button>
         </div>
-        <button style={{ ...S.forwardBtn, width:'100%', background:'#7C3AED' }} onClick={() => handleReschedule(selectedRequest.id)}>
-          Confirm New Date & Time
-        </button>
       </div>
     )}
+
+    {showRescheduleForm && (
+      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px', marginTop: '10px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', marginBottom: '8px' }}>New Date & Time *</div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input type="date" style={{ flex: 1, border: '1px solid #BFDBFE', borderRadius: '6px', padding: '8px', fontSize: '11px', outline: 'none' }}
+            min={new Date().toISOString().split('T')[0]} value={rescheduleData.date} onChange={e => setRescheduleData({ ...rescheduleData, date: e.target.value })} />
+          <input type="time" style={{ flex: 1, border: '1px solid #BFDBFE', borderRadius: '6px', padding: '8px', fontSize: '11px', outline: 'none' }}
+            value={rescheduleData.time} onChange={e => setRescheduleData({ ...rescheduleData, time: e.target.value })} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <button style={{ ...S.approveBtn, flex: 1 }} onClick={() => handleReschedule(selectedRequest.id)}>Confirm Reschedule</button>
+          <button style={{ ...S.rejectBtn, background: '#64748B', flex: 0.5 }} onClick={() => { setShowRescheduleForm(false); setRescheduleData({ date: '', time: '' }); }}>Cancel</button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+{/* Director: read-only */}
+{selectedRequest.status === 'Pending' && role === 'Director' && (
+  <div style={S.actionNote}>
+    <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px', padding: '10px 13px', fontSize: '11px', color: '#92400E', marginTop: '16px' }}>
+      ℹ️ The Director's Office handles approvals, rejections and rescheduling.
+    </div>
+  </div>
+)}
+
+{/* Show rejection reason */}
+{selectedRequest.status === 'Rejected' && selectedRequest.rejection_reason && (
+  <div style={{ marginTop: '16px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '8px', padding: '10px 13px', fontSize: '11px', color: '#991B1B' }}>
+    ❌ Rejected — Reason: {selectedRequest.rejection_reason}
   </div>
 )}
                 </>

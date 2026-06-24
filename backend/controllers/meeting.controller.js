@@ -10,7 +10,7 @@ const upload = multer({ storage });
 
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
-const { sendMeetingApprovedEmail, sendMeetingRejectedEmail } = require('../utils/email');
+const { sendMeetingSubmittedEmail, sendMeetingApprovedEmail, sendMeetingRejectedEmail, sendMeetingRescheduledEmail } = require('../utils/email');
 
 const logAudit = (user_id, action, module) => {
   const sql = `INSERT INTO audit_logs (id, user_id, action, module) VALUES (?, ?, ?, ?)`;
@@ -18,6 +18,8 @@ const logAudit = (user_id, action, module) => {
     if (err) console.log('Audit log error:', err.message);
   });
 };
+
+
 
 // SUBMIT MEETING REQUEST (Staff)
 const submitRequest = (req, res) => {
@@ -27,21 +29,30 @@ const submitRequest = (req, res) => {
   const attachment = req.file ? req.file.filename : null;
 
   const sql = `INSERT INTO meeting_requests (id, requester_id, purpose, priority, preferred_date, preferred_time, requester_name, department, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-  db.query(sql, [id, requester_id, purpose, priority, preferred_date, preferred_time, requester_name || '', department || '', attachment], (err) => {
+  db.query(sql, [id, requester_id, purpose, priority, preferred_date, preferred_time, requester_name || '', department || '', attachment], async (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    
-    // Send notification to Secretary and Director
-    const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
+
+    // Notify Secretary/Director
     db.query(`SELECT id, role FROM users WHERE role IN ('Director', 'Secretary') AND status = 'active'`, (err2, users) => {
-      if (!err2 && users && users.length > 0) {
+      if (!err2 && users) {
+        const reqDate = preferred_date ? new Date(preferred_date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '';
         users.forEach(u => {
-          const reqDate = new Date(preferred_date).toLocaleDateString('en-IN', { dateStyle: 'medium' });
-          db.query(notifSql, [uuidv4(), u.id, `📅 New Meeting Request: "${purpose}" on ${reqDate} (Priority: ${priority})`, 'meeting_request']);
+          db.query(`INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`,
+            [uuidv4(), u.id, `📅 New Meeting Request: "${purpose}" on ${reqDate} (Priority: ${priority})`, 'meeting_request']);
         });
       }
     });
-    
+
+    // Email confirmation to requester
+    try {
+      const userRes = await new Promise((resolve, reject) => {
+        db.query(`SELECT email, name FROM users WHERE id = ?`, [requester_id], (e, r) => e ? reject(e) : resolve(r));
+      });
+      if (userRes.length > 0) {
+        await sendMeetingSubmittedEmail(userRes[0].email, userRes[0].name, purpose, preferred_date, priority);
+      }
+    } catch (emailErr) { console.log('Submission email failed:', emailErr.message); }
+
     logAudit(requester_id, 'SUBMITTED meeting request', 'Meetings');
     res.json({ success: true, message: 'Meeting request submitted', data: null });
   });
@@ -102,33 +113,23 @@ const approveRequest = (req, res) => {
 // REJECT REQUEST (Director only)
 const rejectRequest = (req, res) => {
   const { id } = req.params;
+  const { reason } = req.body; // reason for rejection
 
-  const sql = `UPDATE meeting_requests SET status = 'Rejected' WHERE id = ?`;
-
-  db.query(sql, [id], (err) => {
+  const sql = `UPDATE meeting_requests SET status = 'Rejected', rejection_reason = ? WHERE id = ?`;
+  db.query(sql, [reason || null, id], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
 
     const getSql = `SELECT mr.*, u.email, u.name FROM meeting_requests mr JOIN users u ON u.id = mr.requester_id WHERE mr.id = ?`;
-
     db.query(getSql, [id], async (err2, results) => {
       if (err2 || results.length === 0) return res.json({ success: true, message: 'Request rejected', data: null });
-
       const request = results[0];
-
       logAudit(req.user.id, 'REJECTED meeting request', 'Meetings');
-
-      // Send notification
-      const notifSql = `INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`;
-      db.query(notifSql, [uuidv4(), request.requester_id, 'Your meeting request has been rejected', 'meeting_rejected']);
-
-      // Send email
+      db.query(`INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`,
+        [uuidv4(), request.requester_id, `Your meeting request has been rejected${reason ? ': ' + reason : ''}`, 'meeting_rejected']);
       try {
-        await sendMeetingRejectedEmail(request.email, request.name, request.purpose);
-      } catch (emailErr) {
-        console.log('Rejection email failed:', emailErr.message);
-      }
-
-      res.json({ success: true, message: 'Request rejected, notification and email sent', data: null });
+        await sendMeetingRejectedEmail(request.email, request.name, request.purpose, reason);
+      } catch (emailErr) { console.log('Rejection email failed:', emailErr.message); }
+      res.json({ success: true, message: 'Request rejected', data: null });
     });
   });
 };
@@ -139,10 +140,20 @@ const rescheduleRequest = (req, res) => {
   const { preferred_date, preferred_time } = req.body;
 
   const sql = `UPDATE meeting_requests SET status = 'Rescheduled', preferred_date = ?, preferred_time = ? WHERE id = ?`;
-
   db.query(sql, [preferred_date, preferred_time, id], (err) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    res.json({ success: true, message: 'Request rescheduled', data: null });
+
+    const getSql = `SELECT mr.*, u.email, u.name FROM meeting_requests mr JOIN users u ON u.id = mr.requester_id WHERE mr.id = ?`;
+    db.query(getSql, [id], async (err2, results) => {
+      if (err2 || results.length === 0) return res.json({ success: true, message: 'Rescheduled', data: null });
+      const req2 = results[0];
+      db.query(`INSERT INTO notifications (id, user_id, message, type) VALUES (?, ?, ?, ?)`,
+        [uuidv4(), req2.requester_id, `Your meeting request has been rescheduled to ${preferred_date} at ${preferred_time}`, 'meeting_rescheduled']);
+      try {
+        await sendMeetingRescheduledEmail(req2.email, req2.name, req2.purpose, preferred_date, preferred_time);
+      } catch (emailErr) { console.log('Reschedule email failed:', emailErr.message); }
+      res.json({ success: true, message: 'Request rescheduled', data: null });
+    });
   });
 };
 

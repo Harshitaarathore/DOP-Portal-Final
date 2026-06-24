@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
-const { sendVisitorApprovedEmail } = require('../utils/email');
+const { sendVisitorApprovedEmail, sendVisitorRejectedEmail, sendVisitorRescheduledEmail } = require('../utils/email');
 
 const logAudit = (user_id, action, module) => {
   const { v4: uuidv4 } = require('uuid');
@@ -189,16 +189,58 @@ const approveVisitor = async (req, res) => {
 
 
 // REJECT VISITOR (Secretary)
-const rejectVisitor = (req, res) => {
+const rejectVisitor = async (req, res) => {
   const { id } = req.params;
+  const { reason } = req.body;
 
-  const sql = `UPDATE visitors SET approval_status = 'Rejected' WHERE id = ?`;
-
-  db.query(sql, [id], (err) => {
+  db.query(`SELECT * FROM visitors WHERE id = ?`, [id], async (err, rows) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
-    logAudit(req.user.id, 'REJECTED visitor', 'Visitors');
-    res.json({ success: true, message: 'Visitor rejected', data: null });
+    if (!rows.length) return res.json({ success: false, message: 'Visitor not found', data: null });
+    const visitor = rows[0];
+
+    db.query(`UPDATE visitors SET approval_status = 'Rejected', rejection_reason = ? WHERE id = ?`, [reason || null, id], async (err2) => {
+      if (err2) return res.json({ success: false, message: err2.message, data: null });
+      logAudit(req.user.id, 'REJECTED visitor', 'Visitors');
+
+      if (visitor.email) {
+        try {
+          await sendVisitorRejectedEmail(visitor.email, visitor.name, visitor.organization, visitor.visit_date, reason);
+        } catch (emailErr) { console.log('Visitor rejection email failed:', emailErr.message); }
+      }
+      res.json({ success: true, message: 'Visitor rejected', data: null });
+    });
   });
 };
 
-module.exports = { submitVisitor, getTodayVisitors, approveVisitor, rejectVisitor, getMyVisitors };
+const rescheduleVisitor = async (req, res) => {
+  const { id } = req.params;
+  const { rescheduled_date, rescheduled_time } = req.body;
+
+  if (!rescheduled_date || !rescheduled_time) {
+    return res.json({ success: false, message: 'New date and time are required', data: null });
+  }
+
+  db.query(`SELECT * FROM visitors WHERE id = ?`, [id], async (err, rows) => {
+    if (err) return res.json({ success: false, message: err.message, data: null });
+    if (!rows.length) return res.json({ success: false, message: 'Visitor not found', data: null });
+    const visitor = rows[0];
+
+    db.query(
+      `UPDATE visitors SET approval_status = 'Rescheduled', rescheduled_date = ?, rescheduled_time = ? WHERE id = ?`,
+      [rescheduled_date, rescheduled_time, id],
+      async (err2) => {
+        if (err2) return res.json({ success: false, message: err2.message, data: null });
+        logAudit(req.user.id, 'RESCHEDULED visitor', 'Visitors');
+
+        if (visitor.email) {
+          try {
+            await sendVisitorRescheduledEmail(visitor.email, visitor.name, visitor.organization, rescheduled_date, rescheduled_time);
+          } catch (emailErr) { console.log('Visitor reschedule email failed:', emailErr.message); }
+        }
+        res.json({ success: true, message: 'Visitor rescheduled', data: null });
+      }
+    );
+  });
+};
+
+module.exports = { submitVisitor, getTodayVisitors, approveVisitor, rejectVisitor, rescheduleVisitor, getMyVisitors };

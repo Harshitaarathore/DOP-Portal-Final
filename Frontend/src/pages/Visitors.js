@@ -38,6 +38,12 @@ function Visitors() {
   const [submitting, setSubmitting] = useState(false);
   const { count: notifCount } = useNotifCount();
 
+  //handle_reject
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState({ date: '', time: '' });
+
   const showToast = (message, type = 'success') => setToast({ message, type });
 
   useEffect(() => { fetchVisitors(); }, []);
@@ -66,16 +72,33 @@ function Visitors() {
     finally { setSubmitting(false); }
   };
 
-  const handleReject = async (id) => {
-    try {
-      const res = await API.put(`/visitors/${id}/reject`);
-      if (res.data.success) {
-        showToast('Visitor rejected', 'error');
-        fetchVisitors();
-        setSelectedVisitor(prev => ({ ...prev, approval_status: 'Rejected' }));
-      } else { showToast(res.data.message, 'error'); }
-    } catch { showToast('Failed to reject visitor', 'error'); }
-  };
+const handleReject = async (id) => {
+  if (!rejectReason.trim()) { showToast('Please provide a reason for rejection', 'error'); return; }
+  try {
+    const res = await API.put(`/visitors/${id}/reject`, { reason: rejectReason });
+    if (res.data.success) {
+      showToast('Visitor rejected and email sent', 'error');
+      setShowRejectForm(false);
+      setRejectReason('');
+      fetchVisitors();
+      setSelectedVisitor(prev => ({ ...prev, approval_status: 'Rejected' }));
+    } else { showToast(res.data.message, 'error'); }
+  } catch { showToast('Failed to reject visitor', 'error'); }
+};
+
+const handleReschedule = async (id) => {
+  if (!rescheduleData.date || !rescheduleData.time) { showToast('New date and time required', 'error'); return; }
+  try {
+    const res = await API.put(`/visitors/${id}/reschedule`, { rescheduled_date: rescheduleData.date, rescheduled_time: rescheduleData.time });
+    if (res.data.success) {
+      showToast('Visitor rescheduled and email sent', 'success');
+      setShowRescheduleForm(false);
+      setRescheduleData({ date: '', time: '' });
+      fetchVisitors();
+      setSelectedVisitor(prev => ({ ...prev, approval_status: 'Rescheduled' }));
+    } else { showToast(res.data.message, 'error'); }
+  } catch { showToast('Failed to reschedule', 'error'); }
+};
 
   const handleAddVisitor = async () => {
     if (submitting) return;
@@ -339,30 +362,66 @@ function Visitors() {
                     </div>
                   ))}
 
-                  {selectedVisitor.approval_status === 'Pending' && canManage && (
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                      <button style={S.approveBtn} onClick={() => handleApprove(selectedVisitor.id)}>✓ Approve & Generate Pass</button>
-                      <button style={S.rejectBtn} onClick={() => handleReject(selectedVisitor.id)}>✗ Reject</button>
-                    </div>
-                  )}
+                  {selectedVisitor.approval_status === 'Pending' && role === 'Secretary' && (
+  <div style={{ marginTop: '16px' }}>
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+      <button style={S.approveBtn} onClick={() => handleApprove(selectedVisitor.id)}>✓ Approve & Generate Pass</button>
+      <button style={{ ...S.rejectBtn, flex: 0.5 }} onClick={() => { setShowRejectForm(!showRejectForm); setShowRescheduleForm(false); }}>✗ Reject</button>
+      <button style={{ ...S.rejectBtn, flex: 0.5, background: '#1A3A6B' }} onClick={() => { setShowRescheduleForm(!showRescheduleForm); setShowRejectForm(false); }}>🔄 Reschedule</button>
+    </div>
 
-                  {selectedVisitor.approval_status === 'Approved' && selectedVisitor.pass_generated && (
-                    <div style={{ marginTop: '16px' }}>
-                      <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: '#166534', marginBottom: '10px' }}>
-                        ✅ Visitor approved. Entry pass has been generated.
-                      </div>
-                      <button style={{ background: '#1A3A6B', color: '#fff', border: 'none', borderRadius: '6px', padding: '10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', width: '100%' }}
-                        onClick={() => handlePrintPass(selectedVisitor)}>
-                        🖨️ Print Entry Pass
-                      </button>
-                    </div>
-                  )}
+    {/* Reject form */}
+    {showRejectForm && (
+      <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '12px', marginTop: '8px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', marginBottom: '6px' }}>Reason for Rejection *</div>
+        <textarea
+          style={{ width: '100%', border: '1px solid #FECACA', borderRadius: '6px', padding: '8px', fontSize: '11px', resize: 'vertical', height: '60px', outline: 'none', boxSizing: 'border-box' }}
+          placeholder="Provide a reason (will be emailed to visitor)"
+          value={rejectReason}
+          onChange={e => setRejectReason(e.target.value)}
+        />
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <button style={{ ...S.rejectBtn, flex: 1 }} onClick={() => handleReject(selectedVisitor.id)}>Confirm Reject</button>
+          <button style={{ ...S.rejectBtn, background: '#64748B', flex: 0.5 }} onClick={() => { setShowRejectForm(false); setRejectReason(''); }}>Cancel</button>
+        </div>
+      </div>
+    )}
 
-                  {selectedVisitor.approval_status === 'Rejected' && (
-                    <div style={{ marginTop: '16px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: '#991B1B' }}>
-                      ❌ This visitor request has been rejected.
-                    </div>
-                  )}
+    {/* Reschedule form */}
+    {showRescheduleForm && (
+      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px', marginTop: '8px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', marginBottom: '8px' }}>New Visit Date & Time *</div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input type="date" style={{ flex: 1, border: '1px solid #BFDBFE', borderRadius: '6px', padding: '8px', fontSize: '11px', outline: 'none' }}
+            min={new Date().toISOString().split('T')[0]}
+            value={rescheduleData.date}
+            onChange={e => setRescheduleData({ ...rescheduleData, date: e.target.value })} />
+          <input type="time" style={{ flex: 1, border: '1px solid #BFDBFE', borderRadius: '6px', padding: '8px', fontSize: '11px', outline: 'none' }}
+            value={rescheduleData.time}
+            onChange={e => setRescheduleData({ ...rescheduleData, time: e.target.value })} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <button style={{ ...S.approveBtn, flex: 1 }} onClick={() => handleReschedule(selectedVisitor.id)}>Confirm Reschedule</button>
+          <button style={{ ...S.rejectBtn, background: '#64748B', flex: 0.5 }} onClick={() => { setShowRescheduleForm(false); setRescheduleData({ date: '', time: '' }); }}>Cancel</button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+{/* Director sees read-only note */}
+{selectedVisitor.approval_status === 'Pending' && role === 'Director' && (
+  <div style={{ marginTop: '16px', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px', padding: '10px 13px', fontSize: '11px', color: '#92400E' }}>
+    ℹ️ The Director's Office handles approvals, rejections and rescheduling.
+  </div>
+)}
+
+{/* Show rejection reason if rejected */}
+{selectedVisitor.approval_status === 'Rejected' && selectedVisitor.rejection_reason && (
+  <div style={{ marginTop: '16px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '8px', padding: '10px 13px', fontSize: '11px', color: '#991B1B' }}>
+    ❌ Rejected — Reason: {selectedVisitor.rejection_reason}
+  </div>
+)}
                 </>
               ) : (
                 <div style={S.noSelection}>
@@ -442,3 +501,5 @@ const S = {
 };
 
 export default Visitors;
+
+

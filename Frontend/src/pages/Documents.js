@@ -184,10 +184,11 @@ function Documents() {
   // Converts Cloudinary raw URL to a viewable URL using Google Docs viewer
 const getViewUrl = (filePath) => {
   if (!filePath) return '#';
-  // Use Google Docs viewer for PDFs — works perfectly for any public URL
-  if (filePath.includes('.pdf') || filePath.toLowerCase().endsWith('pdf')) {
+  // All Cloudinary files — always use Google Docs viewer for universal viewing
+  if (filePath.includes('cloudinary') || filePath.includes('.pdf') || filePath.includes('.doc') || filePath.includes('.xls') || filePath.includes('.ppt')) {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(filePath)}&embedded=true`;
   }
+  // Images — open directly
   return filePath;
 };
 
