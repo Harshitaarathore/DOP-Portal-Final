@@ -49,6 +49,7 @@ function Communications() {
     { label:'Tasks',         path:'/tasks',          icon:'✅' },
     { label:'Announcements', path:'/announcements',  icon:'📢' },
     { label:'Reports',       path:'/reports',        icon:'📊' },
+    { label:'Audit Logs', path:'/audit-logs', icon:'🕵️' },
     { label:'Settings',      path:'/settings',       icon:'⚙️' },
   ];
 

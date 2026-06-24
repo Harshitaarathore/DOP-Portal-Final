@@ -42,6 +42,7 @@ function Reports() {
     { label:'Tasks',         icon:'✅', path:'/tasks' },
     { label:'Announcements', icon:'📢', path:'/announcements' },
     { label:'Reports',       icon:'📊', path:'/reports' },
+    { label:'Audit Logs', path:'/audit-logs', icon:'🕵️' },
     { label:'Settings',      icon:'⚙️', path:'/settings' },
   ];
 

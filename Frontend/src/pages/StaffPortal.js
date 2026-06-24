@@ -39,11 +39,12 @@ useEffect(() => {
 
   const fetchData = async () => {
     try {
-      const [reqRes, evRes, docRes, announcRes] = await Promise.all([
+      const [reqRes, evRes, docRes, announcRes, deptRes] = await Promise.all([
         API.get('/meetings/my'),
         API.get('/events/public'),
         API.get('/documents'),
         API.get('/announcements'),
+        API.get('/admin/departments'),
       ]);
       if (reqRes.data.success) setMyRequests(reqRes.data.data);
       if (evRes.data.success) setPublicEvents(evRes.data.data);
@@ -51,6 +52,7 @@ useEffect(() => {
         setPublicDocs(docRes.data.data.filter(d => d.access_level === 'public'));
       }
       if (announcRes.data.success) setAnnouncements(announcRes.data.data.slice(0, 3));
+      if (deptRes.data.success) setDepartments(deptRes.data.data.filter(d => d.status === 'active'));
 
       // My visitor requests — filtered locally by email since backend
       // doesn't yet expose a /visitors/my endpoint for Staff
@@ -102,7 +104,7 @@ useEffect(() => {
       return;
     }
     try {
-      const res = await API.post('/visitors/request', { ...newVisitor, invited_by: email });
+      const res = await API.post('/visitors/request', newVisitor);
       if (res.data.success) {
         alert('Visitor request submitted!');
         setNewVisitor({ name: '', organization: '', purpose: '', visit_date: '', visit_time: '' });
@@ -154,7 +156,7 @@ useEffect(() => {
     { key: 'dashboard',   label: 'Dashboard',         icon: '🏠' },
     { key: 'request',     label: 'Request Meeting',   icon: '📋' },
     { key: 'myrequests',  label: 'My Requests',       icon: '📌' },
-    { key: 'calendar',    label: 'Public Calendar',   icon: '📅', external: true },
+    { key: 'calendar',    label: 'Calendar',   icon: '📅', external: true },
     { key: 'documents',   label: 'Documents',         icon: '📁' },
     { key: 'visitor',     label: 'Visitor Request',   icon: '👥' },
     { key: 'announcements', label: 'Announcements',   icon: '📢' },
@@ -167,6 +169,8 @@ useEffect(() => {
     if (h < 17) return 'Good Afternoon';
     return 'Good Evening';
   };
+
+  const [departments, setDepartments] = useState([]);
 
   return (
     <div style={S.page}>
@@ -291,12 +295,15 @@ useEffect(() => {
                   </div>
                   <div style={S.formGroup}>
                     <label style={S.label}>Department *</label>
-                    <input style={S.input} placeholder="e.g. Computer Science"
+                    <select style={S.input}
                       value={newRequest.department || ''}
                       onChange={e => setNewRequest({ ...newRequest, department: e.target.value })}
-                    />
+                    >
+                      <option value="">Select department</option>
+                      {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                    </select>
                   </div>
-                </div>
+                  </div>
                 <div style={S.formGroup}>
                   <label style={S.label}>Purpose of Meeting *</label>
                   <textarea style={{ ...S.input, height: '80px', resize: 'vertical' }}

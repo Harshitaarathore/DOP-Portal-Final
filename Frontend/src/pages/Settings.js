@@ -64,6 +64,7 @@ function Settings() {
     { label:'Tasks',         icon:'✅', path:'/tasks' },
     { label:'Announcements', icon:'📢', path:'/announcements' },
     { label:'Reports',       icon:'📊', path:'/reports' },
+    { label:'Audit Logs', path:'/audit-logs', icon:'🕵️' },
     { label:'Settings',      icon:'⚙️', path:'/settings' },
   ];
 
@@ -194,7 +195,7 @@ const handleSaveNotifPrefs = async () => {
   const handleToggleDeptStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
-      const res = await API.put(`/admin/departments/${id}`, { status: newStatus });
+      const res = await API.put(`/admin/departments/${id}/status`, { status: newStatus });
       if (res.data.success) { fetchDepartments(); showToast(`Department ${newStatus}`); }
     } catch { showToast('Failed to update department', 'error'); }
   };
