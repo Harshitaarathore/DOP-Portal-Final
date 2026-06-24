@@ -13,6 +13,8 @@ function Requests() {
   const [loading, setLoading] = useState(true);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [hoveredStat, setHoveredStat] = useState(null); // FIX 1
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleForm, setRescheduleForm] = useState({ date:'', time:'' });
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
   const email = localStorage.getItem('email') || '';
@@ -52,6 +54,23 @@ function Requests() {
       const res = await API.put(`/meetings/${id}/reject`);
       if (res.data.success) { alert('Request rejected!'); fetchRequests(); setSelectedRequest(null); }
     } catch { alert('Failed to reject'); }
+  };
+
+  const handleReschedule = async (id) => {
+    if (!rescheduleForm.date || !rescheduleForm.time) { alert('Please pick a new date and time'); return; }
+    try {
+      const res = await API.put(`/meetings/${id}/reschedule`, {
+        preferred_date: rescheduleForm.date,
+        preferred_time: rescheduleForm.time,
+      });
+      if (res.data.success) {
+        alert('Request rescheduled!');
+        setShowReschedule(false);
+        setRescheduleForm({ date:'', time:'' });
+        fetchRequests();
+        setSelectedRequest(null);
+      } else { alert(res.data.message || 'Failed to reschedule'); }
+    } catch { alert('Failed to reschedule'); }
   };
 
   const handleSaveNotes = async (id) => {
@@ -197,7 +216,7 @@ function Requests() {
               ) : filtered.map(req => (
                 <div key={req.id}
                   style={{ ...S.reqCard, ...(selectedRequest?.id === req.id ? S.reqCardActive : {}) }}
-                  onClick={() => setSelectedRequest(req)}
+                  onClick={() => { setSelectedRequest(req); setShowReschedule(false); setRescheduleForm({ date:'', time:'' }); }}
                 >
                   <div style={S.reqTop}>
                     <div style={{ ...S.reqAvatar, background:'#1A3A6B' }}>
@@ -271,7 +290,7 @@ function Requests() {
                       </div>
                     )}
                   </div>
-                  {/* APPROVE/REJECT - Secretary (primary) + Director (override) per SRS §5.4 */}
+                  {/* APPROVE/REJECT/RESCHEDULE - Secretary (primary) + Director (override) per SRS §5.4 */}
 {selectedRequest.status === 'Pending' && (role === 'Secretary' || role === 'Director') && (
   <div style={S.actionNote}>
     {role === 'Director' && (
@@ -282,7 +301,31 @@ function Requests() {
     <div style={{ display: 'flex', gap: '10px', marginTop: role === 'Director' ? '8px' : '16px' }}>
       <button style={S.approveBtn} onClick={() => handleApprove(selectedRequest.id)}>✓ Approve</button>
       <button style={S.rejectBtn} onClick={() => handleReject(selectedRequest.id)}>✗ Reject</button>
+      <button style={{ ...S.forwardBtn, flex:1, background:'#7C3AED' }} onClick={() => setShowReschedule(!showReschedule)}>
+        🕒 Reschedule
+      </button>
     </div>
+    {showReschedule && (
+      <div style={{ marginTop:'12px', padding:'12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0' }}>
+        <div style={{ display:'flex', gap:'8px', marginBottom:'10px' }}>
+          <input
+            type="date"
+            style={{ flex:1, border:'1px solid #E2E8F0', borderRadius:'6px', padding:'8px 10px', fontSize:'11px', outline:'none', boxSizing:'border-box' }}
+            value={rescheduleForm.date}
+            onChange={e => setRescheduleForm({ ...rescheduleForm, date:e.target.value })}
+          />
+          <input
+            type="time"
+            style={{ flex:1, border:'1px solid #E2E8F0', borderRadius:'6px', padding:'8px 10px', fontSize:'11px', outline:'none', boxSizing:'border-box' }}
+            value={rescheduleForm.time}
+            onChange={e => setRescheduleForm({ ...rescheduleForm, time:e.target.value })}
+          />
+        </div>
+        <button style={{ ...S.forwardBtn, width:'100%', background:'#7C3AED' }} onClick={() => handleReschedule(selectedRequest.id)}>
+          Confirm New Date & Time
+        </button>
+      </div>
+    )}
   </div>
 )}
                 </>

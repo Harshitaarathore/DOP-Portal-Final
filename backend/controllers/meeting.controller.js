@@ -133,7 +133,7 @@ const rejectRequest = (req, res) => {
   });
 };
 
-// RESCHEDULE REQUEST (Secretary)
+// RESCHEDULE REQUEST (Secretary or Director)
 const rescheduleRequest = (req, res) => {
   const { id } = req.params;
   const { preferred_date, preferred_time } = req.body;
