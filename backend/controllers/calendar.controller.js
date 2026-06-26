@@ -72,9 +72,8 @@ const getFullEvents = (req, res) => {
 };
 
 // GET PUBLIC EVENTS (Staff) - no confidential events, no notes
-// GET PUBLIC EVENTS (Staff) - only Public events
 const getPublicEvents = (req, res) => {
-  const sql = `SELECT id, title, start_time, end_time, type FROM events WHERE type = 'Public' ORDER BY start_time ASC`;
+  const sql = `SELECT id, title, start_time, end_time, type FROM events WHERE type != 'Confidential' ORDER BY start_time ASC`;
 
   db.query(sql, (err, results) => {
     if (err) return res.json({ success: false, message: err.message, data: null });

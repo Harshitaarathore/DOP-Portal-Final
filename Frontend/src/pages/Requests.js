@@ -102,19 +102,24 @@ const handleReschedule = async (id) => {
   const stBg     = { Pending: '#FEF3C7', Approved: '#DCFCE7', Rejected: '#FEE2E2', Rescheduled: '#EDE9FE' };
   const stColor  = { Pending: '#92400E', Approved: '#166534', Rejected: '#991B1B', Rescheduled: '#5B21B6' };
 
-  const navItems = [
-    { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
-    { label:'Calendar',      path:'/calendar',       icon:'📅' },
-    { label:'Requests',      path:'/requests',       icon:'📋' },
-    { label:'Documents',     path:'/documents',      icon:'📁' },
-    { label:'Visitors',      path:'/visitors',       icon:'👥' },
-    { label:'Communication', path:'/communications', icon:'💬' },
-    { label:'Tasks',         path:'/tasks',          icon:'✅' },
-    { label:'Announcements', path:'/announcements',  icon:'📢' },
-    { label:'Reports',       path:'/reports',        icon:'📊' },
-    { label:'Audit Logs', path:'/audit-logs', icon:'🕵️' },
-    { label:'Settings',      path:'/settings',       icon:'⚙️' },
-  ];
+  const navItems = role === 'Director' ? [
+  { label:'Dashboard', path:'/director-dashboard', icon:'🏠' },
+  { label:'Requests',  path:'/requests',           icon:'📋' },
+  { label:'Calendar',  path:'/calendar',            icon:'📅' },
+  { label:'Settings',  path:'/settings',            icon:'⚙️' },
+] : [
+  { label:'Dashboard', path:'/dashboard',           icon:'🏠' },
+  { label:'Calendar',      path:'/calendar',       icon:'📅' },
+  { label:'Requests',      path:'/requests',       icon:'📋' },
+  { label:'Documents',     path:'/documents',      icon:'📁' },
+  { label:'Visitors',      path:'/visitors',       icon:'👥' },
+  { label:'Communication', path:'/communications', icon:'💬' },
+  { label:'Tasks',         path:'/tasks',          icon:'✅' },
+  { label:'Announcements', path:'/announcements',  icon:'📢' },
+  { label:'Reports',       path:'/reports',        icon:'📊' },
+  { label:'Audit Logs', path:'/audit-logs', icon:'🕵️' },
+  { label:'Settings',      path:'/settings',       icon:'⚙️' },
+];
 
   const stats = [
     { label:'Total',    num: requests.length,                                    bg:'#EFF6FF', color:'#1A3A6B' },
