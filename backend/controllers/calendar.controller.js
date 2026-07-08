@@ -37,7 +37,13 @@ db.query(sql, [id, title, description, start_time, end_time, type, visibility, c
   const eventDate = new Date(start_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
   
   // Send to ALL active users
-  db.query(`SELECT id FROM users WHERE status = 'active'`, (err3, users) => {
+ const roleFilter = type === 'Confidential'
+  ? `SELECT id FROM users WHERE status = 'active' AND role IN ('Secretary', 'Director')`
+  : type === 'Internal'
+  ? `SELECT id FROM users WHERE status = 'active' AND role IN ('Secretary', 'Director', 'Staff')`
+  : `SELECT id FROM users WHERE status = 'active'`;
+
+db.query(roleFilter, (err3, users) => {
     console.log('Users found for notification:', users?.length, err3?.message);
     if (!err3 && users && users.length > 0) {
       users.forEach(u => {

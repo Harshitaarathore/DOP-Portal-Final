@@ -5,7 +5,7 @@ const apiInstance = new Brevo.TransactionalEmailsApi();
 apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
 
 // LNMIIT logo hosted publicly — used in all emails
-const LOGO_URL = 'https://lnmiit.ac.in/wp-content/uploads/2022/05/LNMIIT-Logo.png';
+const LOGO_URL = 'https://res.cloudinary.com/dnecujpt3/image/upload/v1783500960/lnmiit-logo_mcpcoj.jpg';
 
 const baseTemplate = (content) => `<!DOCTYPE html>  
 <html><head><title>LNMIIT Director's Office</title></head>
