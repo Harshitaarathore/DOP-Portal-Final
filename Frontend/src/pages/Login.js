@@ -26,6 +26,7 @@ function Login() {
         else if (role === 'Staff') navigate('/staff-portal');
         else if (role === 'Faculty') navigate('/staff-portal');
         else if (role === 'Visitor') navigate('/visitor-dashboard');
+        else if (role === 'SuperAdmin') navigate('/superadmin');
         else navigate('/dashboard');
       } else {
         alert(res.data.message || 'Login failed');

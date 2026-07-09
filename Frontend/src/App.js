@@ -7,6 +7,8 @@ import OTPVerification from './pages/OTPVerification';
 import ResetPassword from './pages/ResetPassword';
 import SuccessPage from './pages/SuccessPage';
 
+import SuperAdmin from './pages/SuperAdmin';
+
 import SecretaryDashboard from './pages/SecretaryDashboard';
 import Calendar from './pages/Calendar';
 import Requests from './pages/Requests';
@@ -15,6 +17,7 @@ import Visitors from './pages/Visitors';
 import Documents from './pages/Documents';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+
 
 import DirectorDashboard from './pages/DirectorDashboard';
 import DirectorRequests from './pages/DirectorRequests';
@@ -30,10 +33,14 @@ import Announcements from './pages/Announcements';
 import AuditLogs from './pages/AuditLogs';
 import Communications from './pages/Communications';
 
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['SuperAdmin']}><SuperAdmin /></ProtectedRoute>} />
+
         {/* Public */}
         <Route path="/"                 element={<Login />} />
         <Route path="/forgot-password"  element={<ForgotPassword />} />

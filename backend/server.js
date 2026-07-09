@@ -16,6 +16,7 @@ const announcementRoutes = require('./routes/announcement.routes');
 const { verifyToken } = require('./middleware/auth.middleware');
 const { allowRoles } = require('./middleware/role.middleware');
 const { startScheduler } = require('./utils/scheduler');
+const superAdminRoutes = require('./routes/superadmin.routes');
 
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/reports', reportRoutes);
 app.use('/admin', adminRoutes);
 app.use('/communications', communicationRoutes);
 app.use('/announcements', announcementRoutes);
+app.use('/superadmin', superAdminRoutes);
 
 app.get('/test-auth', verifyToken, (req, res) => {
   res.json({ success: true, message: `Hello ${req.user.role}`, data: null });
