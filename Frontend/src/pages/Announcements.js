@@ -28,7 +28,6 @@ function Announcements() {
   const [showForm, setShowForm] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [form, setForm] = useState({ title:'', content:'', priority:'Medium', category:'General', pinned:false });
@@ -36,7 +35,6 @@ function Announcements() {
 
 
   const { count: notifCount } = useNotifCount();
-  const showToast = (message, type = 'success') => setToast({ message, type });
 
   const navItems = [
     { label:'Dashboard', path: role === 'Director' ? '/director-dashboard' : '/dashboard', icon:'🏠' },
@@ -194,8 +192,8 @@ const handlePin = async (id) => {
               </div>
               {formError && <div style={S.errorMsg}>⚠️ {formError}</div>}
               <div style={{ display:'flex', gap:'8px' }}>
-                <button style={{ ...S.addBtn, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? 'Publishing...' : 'Publish →'}
+                <button style={{ ...S.addBtn, opacity: loading ? 0.6 : 1 }} onClick={handleSubmit} disabled={loading}>
+                  {loading ? 'Publishing...' : 'Publish →'}
                 </button>
                 <button style={{ ...S.addBtn, background:'#64748B' }} onClick={() => { setShowForm(false); setFormError(''); }}>Cancel</button>
               </div>

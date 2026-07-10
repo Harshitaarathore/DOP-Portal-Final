@@ -82,8 +82,19 @@ router.put('/notifications/:id/read', verifyToken, (req, res) => {
 
 // AUDIT LOGS
 router.get('/audit-logs', verifyToken, allowRoles('Secretary', 'Director'), (req, res) => {
-  const sql = `SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 100`;
-  db.query(sql, (err, results) => {
+  const { module, limit = 100 } = req.query;
+  let sql = `SELECT al.*, u.name as user_name, u.role as user_role FROM audit_logs al LEFT JOIN users u ON u.id = al.user_id`;
+  const params = [];
+
+  if (module) {
+    sql += ` WHERE al.module = ?`;
+    params.push(module);
+  }
+
+  sql += ` ORDER BY al.timestamp DESC LIMIT ?`;
+  params.push(parseInt(limit, 10));
+
+  db.query(sql, params, (err, results) => {
     if (err) return res.json({ success: false, message: err.message, data: null });
     res.json({ success: true, message: 'Audit logs fetched', data: results });
   });

@@ -50,31 +50,23 @@ function AuditLogs() {
 
   const modules = ['all', 'Auth', 'Requests', 'Calendar', 'Tasks', 'Documents', 'Visitors'];
 
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
   const filtered = logs
     .filter(l => filterModule === 'all' || l.module === filterModule)
     .filter(l =>
       !search ||
       (l.action || '').toLowerCase().includes(search.toLowerCase()) ||
       (l.module || '').toLowerCase().includes(search.toLowerCase()) ||
+      (l.user_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (l.user_role || '').toLowerCase().includes(search.toLowerCase()) ||
       (l.user_id || '').toLowerCase().includes(search.toLowerCase())
     );
 
   const todayStr = new Date().toISOString().split('T')[0];
-
-  const actionBg = {
-    'APPROVED visitor':    '#DCFCE7', 'REJECTED visitor':    '#FEE2E2',
-    'RESCHEDULED visitor': '#DBEAFE', 'APPROVED request':    '#DCFCE7',
-    'REJECTED request':    '#FEE2E2', 'RESCHEDULED request': '#DBEAFE',
-    'UPLOADED document':   '#EDE9FE', 'DELETED document':    '#FEE2E2',
-    'LOGIN':               '#F0FDF4',
-  };
-  const actionColor = {
-    'APPROVED visitor':    '#166534', 'REJECTED visitor':    '#991B1B',
-    'RESCHEDULED visitor': '#1E40AF', 'APPROVED request':    '#166534',
-    'REJECTED request':    '#991B1B', 'RESCHEDULED request': '#1E40AF',
-    'UPLOADED document':   '#5B21B6', 'DELETED document':    '#991B1B',
-    'LOGIN':               '#166534',
-  };
 
   const getActionStyle = (action) => {
     const a = (action || '').toUpperCase();
@@ -150,7 +142,7 @@ function AuditLogs() {
               🔔 {notifCount > 0 && <span style={S.notifBadge}>{notifCount}</span>}
             </div>
             <button style={S.btnOutline} onClick={() => navigate(role === 'Director' ? '/director-dashboard' : '/dashboard')}>← Dashboard</button>
-            <button style={S.btnLogout} onClick={() => { localStorage.clear(); navigate('/'); }}>⏻ Logout</button>
+            <button style={S.btnLogout} onClick={handleLogout}>⏻ Logout</button>
           </div>
         </div>
 
@@ -208,7 +200,7 @@ function AuditLogs() {
               <div style={{ ...S.th, flex:1.2 }}>Timestamp</div>
               <div style={{ ...S.th, flex:0.8 }}>Action</div>
               <div style={{ ...S.th, flex:0.8 }}>Module</div>
-              <div style={{ ...S.th, flex:1.5 }}>User ID</div>
+              <div style={{ ...S.th, flex:1.5 }}>User</div>
             </div>
 
             {loading ? (
@@ -236,9 +228,14 @@ function AuditLogs() {
                     </span>
                   </div>
                   <div style={{ ...S.td, flex:1.5 }}>
-                    <span style={{ fontSize:'10px', color:'#475569', fontFamily:'monospace' }}>
-                      {log.user_id || '—'}
-                    </span>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:'3px' }}>
+                      <span style={{ fontSize:'11px', fontWeight:'700', color:'#1E293B' }}>
+                        {log.user_name || 'Unknown user'}
+                      </span>
+                      <span style={{ ...S.userMetaPill }}>
+                        {log.user_role || '—'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -259,7 +256,7 @@ function AuditLogs() {
 }
 
 const S = {
-  page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'#F5F7FA', overflow:'hidden' },
+  page:           { display:'flex', height:'100vh', fontFamily:"'DM Sans',sans-serif", background:'linear-gradient(180deg,#F5F7FA 0%, #EEF4FB 100%)', overflow:'hidden' },
   sidebar:        { width:'200px', background:'#fff', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto', borderRight:'1px solid #E2E8F0', boxShadow:'1px 0 4px rgba(0,0,0,0.06)' },
   logoWrap:       { padding:'14px 16px 12px', borderBottom:'1px solid #E2E8F0', display:'flex', justifyContent:'center' },
   logo:           { width:'130px', objectFit:'contain' },
@@ -271,7 +268,7 @@ const S = {
   navActive:      { background:'#EFF6FF', color:'#1A3A6B', borderLeft:'3px solid #2563EB', fontWeight:'700' },
   navIcon:        { fontSize:'14px', marginRight:'8px', flexShrink:0 },
   main:           { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
-  topbar:         { background:'#fff', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+  topbar:         { background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', padding:'10px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, borderBottom:'1px solid #E2E8F0', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
   topbarUser:     { display:'flex', alignItems:'center', gap:'10px' },
   topbarAvatar:   { width:'36px', height:'36px', borderRadius:'50%', background:'linear-gradient(135deg,#2563EB,#0EA5E9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700', color:'#fff', flexShrink:0 },
   topbarUserName: { color:'#1A3A6B', fontSize:'13px', fontWeight:'700' },
@@ -283,12 +280,12 @@ const S = {
   btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   refreshBtn:     { background:'#F1F5F9', color:'#1A3A6B', border:'1px solid #E2E8F0', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
-  content:        { flex:1, overflowY:'auto', padding:'16px 20px' },
+  content:        { flex:1, overflowY:'auto', padding:'16px 20px 20px' },
   pageHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' },
   pageTitle:      { fontSize:'16px', fontWeight:'700', color:'#1E293B' },
   pageSub:        { fontSize:'11px', color:'#64748B', marginTop:'2px' },
   statGrid:       { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'14px' },
-  statCard:       { borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #E2E8F0', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
+  statCard:       { borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #E2E8F0', boxShadow:'0 1px 3px rgba(0,0,0,0.04)', transition:'transform 0.18s ease, box-shadow 0.18s ease' },
   statNum:        { fontSize:'22px', fontWeight:'700', lineHeight:1 },
   statLabel:      { fontSize:'10px', color:'#64748B', fontWeight:'500' },
   searchInput:    { width:'100%', border:'1px solid #E2E8F0', borderRadius:'8px', padding:'10px 14px', fontSize:'12px', color:'#1E293B', outline:'none', boxSizing:'border-box', background:'#fff' },
@@ -298,9 +295,10 @@ const S = {
   tableWrap:      { background:'#fff', borderRadius:'12px', border:'1px solid #E2E8F0', overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' },
   tableHead:      { display:'flex', alignItems:'center', padding:'10px 16px', background:'#F8FAFC', borderBottom:'1px solid #E2E8F0' },
   th:             { fontSize:'10px', fontWeight:'700', color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px' },
-  tableRow:       { display:'flex', alignItems:'center', padding:'10px 16px', borderBottom:'1px solid #F8FAFC' },
+  tableRow:       { display:'flex', alignItems:'center', padding:'10px 16px', borderBottom:'1px solid #F8FAFC', transition:'background 0.15s ease' },
   td:             { display:'flex', alignItems:'center', paddingRight:'8px' },
   pill:           { fontSize:'9px', fontWeight:'700', padding:'3px 9px', borderRadius:'10px' },
+  userMetaPill:   { fontSize:'9px', fontWeight:'700', padding:'3px 8px', borderRadius:'999px', background:'#EFF6FF', color:'#1A3A6B' },
   empty:          { padding:'30px', textAlign:'center', fontSize:'12px', color:'#94A3B8' },
 };
 

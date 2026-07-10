@@ -51,7 +51,6 @@ function SecretaryDashboard() {
   const [schedule, setSchedule] = useState([]);
   const [requests, setRequests] = useState([]);
   const [tasks, setTasks] = useState({ pending: 0, inProgress: 0, completed: 0 });
-  const [notifications, setNotifications] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
@@ -77,12 +76,11 @@ function SecretaryDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [eventsRes, reqRes, tasksRes, visitorsRes, notifRes] = await Promise.all([
+      const [eventsRes, reqRes, tasksRes, visitorsRes] = await Promise.all([
         API.get('/events/full'),
         API.get('/meetings/all'),
         API.get('/tasks'),
-        API.get('/visitors/today'),
-        API.get('/user/notifications')
+        API.get('/visitors/today')
       ]);
 
       if (eventsRes.data.success) {
@@ -116,7 +114,6 @@ function SecretaryDashboard() {
   const todayVisitors = visitorsRes.data.data.filter(v => v.visit_date && v.visit_date.split('T')[0] === todayStr);
   setStats(prev => ({ ...prev, visitors: todayVisitors.length }));
 }
-      if (notifRes.data.success) setNotifications(notifRes.data.data.filter(n => n.read_status === 0).slice(0, 3));
     } catch (err) { console.log('Dashboard fetch error:', err); }
 
     const announcementsRes = await API.get('/announcements');
@@ -633,7 +630,6 @@ btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadiu
 btnLogoutHover: { background:'#B91C1C' },
 
   navIcon: { fontSize:'14px', marginRight:'8px', flexShrink:0 },
-  navItem: { padding:'10px 16px', cursor:'pointer', fontSize:'12px', color:'#475569', fontWeight:'500', borderLeft:'3px solid transparent', transition:'all 0.2s ease', userSelect:'none', display:'flex', alignItems:'center' },
 };
 
   

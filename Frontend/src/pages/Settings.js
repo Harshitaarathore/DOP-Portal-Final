@@ -564,7 +564,7 @@ function FormField({ label, value, onChange, placeholder, type='text', disabled=
     <div style={{ display:'flex', flexDirection:'column', marginBottom:'14px' }}>
       <label style={{ fontSize:'11px', fontWeight:'600', color:'#475569', marginBottom:'6px' }}>{label}</label>
       <input
-        style={{ border:'1px solid #E2E8F0', borderRadius:'8px', padding:'10px 13px', fontSize:'12px', color:'#1E293B', outline:'none', boxSizing:'border-box', background:disabled?'#F8FAFC':'#fff', color:disabled?'#94A3B8':'#1E293B' }}
+        style={{ border:'1px solid #E2E8F0', borderRadius:'8px', padding:'10px 13px', fontSize:'12px', outline:'none', boxSizing:'border-box', background:disabled?'#F8FAFC':'#fff', color:disabled?'#94A3B8':'#1E293B' }}
         type={type} value={value} onChange={onChange} placeholder={placeholder} disabled={disabled}
       />
     </div>

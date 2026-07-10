@@ -13,8 +13,6 @@ function Requests() {
   const [loading, setLoading] = useState(true);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [hoveredStat, setHoveredStat] = useState(null); // FIX 1
-  const [showReschedule, setShowReschedule] = useState(false);
-  const [rescheduleForm, setRescheduleForm] = useState({ date:'', time:'' });
   const role = localStorage.getItem('role');
   const name = localStorage.getItem('name') || 'User';
   const email = localStorage.getItem('email') || '';
@@ -233,7 +231,7 @@ const handleReschedule = async (id) => {
               ) : filtered.map(req => (
                 <div key={req.id}
                   style={{ ...S.reqCard, ...(selectedRequest?.id === req.id ? S.reqCardActive : {}) }}
-                  onClick={() => { setSelectedRequest(req); setShowReschedule(false); setRescheduleForm({ date:'', time:'' }); }}
+                  onClick={() => { setSelectedRequest(req); setShowRescheduleForm(false); setRescheduleData({ date: '', time: '' }); }}
                 >
                   <div style={S.reqTop}>
                     <div style={{ ...S.reqAvatar, background:'#1A3A6B' }}>

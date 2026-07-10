@@ -33,7 +33,6 @@ function Visitors() {
   const name = localStorage.getItem('name') || 'User';
   const email = localStorage.getItem('email') || '';
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
-  const canManage = role === 'Secretary' || role === 'Director';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const [submitting, setSubmitting] = useState(false);
   const { count: notifCount } = useNotifCount();
@@ -131,14 +130,6 @@ const handleReschedule = async (id) => {
       } else { setFormError(res.data.message); }
     } catch { setFormError('Failed to submit visitor request'); }
     finally { setSubmitting(false); }
-  };
-
-  const handlePrintPass = (visitor) => {
-    const passContent = `<html><head><style>body{font-family:Arial,sans-serif;padding:40px}.pass{border:3px solid #1A3A6B;border-radius:12px;padding:30px;max-width:400px;margin:auto}.header{background:#1A3A6B;color:white;padding:16px;border-radius:8px;text-align:center;margin-bottom:20px}.title{font-size:20px;font-weight:bold}.sub{font-size:12px;opacity:.8;margin-top:4px}.field{margin-bottom:12px}.label{font-size:11px;color:#64748B;font-weight:bold;text-transform:uppercase}.value{font-size:14px;color:#1E293B;font-weight:600;margin-top:2px}.badge{background:#DCFCE7;color:#166534;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:bold;display:inline-block;margin-top:16px}.footer{margin-top:20px;padding-top:16px;border-top:1px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center}</style></head><body><div class="pass"><div class="header"><div class="title">LNMIIT — Entry Pass</div><div class="sub">Director's Office</div></div><div class="field"><div class="label">Visitor Name</div><div class="value">${visitor.name}</div></div><div class="field"><div class="label">Organization</div><div class="value">${visitor.organization || 'N/A'}</div></div><div class="field"><div class="label">Purpose</div><div class="value">${visitor.purpose}</div></div><div class="field"><div class="label">Visit Date</div><div class="value">${new Date(new Date(visitor.visit_date).getTime() + new Date(visitor.visit_date).getTimezoneOffset() * 60000).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div></div><div class="field"><div class="label">Visit Time</div><div class="value">${visitor.visit_time || '10:00'}</div></div><div class="badge">✓ APPROVED</div><div class="footer">This pass is valid for the mentioned date only.<br/>Issued by: Director's Office, LNMIIT Jaipur</div></div></body></html>`;
-    const win = window.open('', '_blank');
-    win.document.write(passContent);
-    win.document.close();
-    win.print();
   };
 
   const handleLogout = () => { localStorage.clear(); navigate('/'); };
@@ -501,5 +492,6 @@ const S = {
 };
 
 export default Visitors;
+
 
 

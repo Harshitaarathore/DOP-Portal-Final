@@ -42,7 +42,7 @@ function FacultyCalendar() {
           <div style={styles.logoSub}>Director's Office</div>
         </div>
         {[
-          {label:'Dashboard',   path:'/faculty-dashboard'},
+          {label:'Dashboard',   path:'/faculty-requests'},
           {label:'My Requests', path:'/faculty-requests'},
           {label:'Calendar',    path:'/faculty-calendar'},
           {label:'My Tasks',    path:'/tasks'},

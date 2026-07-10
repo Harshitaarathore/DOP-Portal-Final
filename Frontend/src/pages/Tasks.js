@@ -47,7 +47,7 @@ function Tasks() {
   { label:'Announcements',   path:'/staff-portal',    icon:'📢' },
   { label:'Settings',        path:'/staff-portal',    icon:'⚙️' },
 ] : role === 'Faculty' ? [
-  { label:'Dashboard',     path:'/faculty-dashboard', icon:'🏠' },
+  { label:'Dashboard',     path:'/faculty-requests', icon:'🏠' },
   { label:'My Requests',   path:'/faculty-requests',  icon:'📋' },
   { label:'Calendar',      path:'/faculty-calendar',  icon:'📅' },
   { label:'Tasks',         path:'/tasks',             icon:'✅' },

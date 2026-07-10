@@ -24,9 +24,8 @@ function Login() {
         if (role === 'Director') navigate('/director-dashboard');
         else if (role === 'Secretary') navigate('/dashboard');
         else if (role === 'Staff') navigate('/staff-portal');
-        else if (role === 'Faculty') navigate('/staff-portal');
+        else if (role === 'Faculty') navigate('/faculty-requests');
         else if (role === 'Visitor') navigate('/visitor-dashboard');
-        else if (role === 'SuperAdmin') navigate('/superadmin');
         else navigate('/dashboard');
       } else {
         alert(res.data.message || 'Login failed');

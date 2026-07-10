@@ -14,9 +14,10 @@ function ProtectedRoute({ children, allowedRoles }) {
   if (allowedRoles && !allowedRoles.includes(role)) {
     if (role === 'Director')       return <Navigate to="/director-dashboard" />;
     if (role === 'Secretary')      return <Navigate to="/dashboard" />;
-    if (role === 'Faculty')        return <Navigate to="/faculty-dashboard" />;
+    if (role === 'Faculty')        return <Navigate to="/faculty-requests" />;
     if (role === 'Visitor')        return <Navigate to="/visitor-dashboard" />;
     if (role === 'Staff')          return <Navigate to="/staff-portal" />;
+    return <Navigate to="/" />;
   }
 
   return children;

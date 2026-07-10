@@ -17,7 +17,6 @@ useEffect(() => {
   if (tabFromUrl) setActiveTab(tabFromUrl);
 }, [location.search]);
   const [myRequests, setMyRequests] = useState([]);
-  const [publicEvents, setPublicEvents] = useState([]);
   const [publicDocs, setPublicDocs] = useState([]);
   const [myVisitors, setMyVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +46,7 @@ useEffect(() => {
         API.get('/admin/departments'),
       ]);
       if (reqRes.data.success) setMyRequests(reqRes.data.data);
-      if (evRes.data.success) setPublicEvents(evRes.data.data);
+      if (evRes.data.success) { /* public events handled elsewhere */ }
       if (docRes.data.success) {
         setPublicDocs(docRes.data.data.filter(d => d.access_level === 'public'));
       }

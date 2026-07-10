@@ -396,7 +396,6 @@ notifWrap:  { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8
   topbarUserEmail:{ color:'#94A3B8', fontSize:'9px' },
   topbarUserRole: { color:'#64748B', fontSize:'10px' },
   topbarRight:    { display:'flex', alignItems:'center', gap:'8px' },
-  notifWrap:      { position:'relative', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'6px', padding:'6px 10px', color:'#1A3A6B', fontSize:'14px', cursor:'pointer' },
   btnOutline:     { background:'transparent', color:'#1A3A6B', border:'1px solid #1A3A6B', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap' },
   btnLogout:      { background:'#DC2626', color:'#fff', border:'none', borderRadius:'4px', padding:'7px 14px', fontSize:'12px', fontWeight:'600', cursor:'pointer' },
   content:        { flex:1, overflowY:'auto', padding:'16px 20px' },

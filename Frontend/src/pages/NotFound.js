@@ -8,7 +8,7 @@ function NotFound() {
   const goHome = () => {
     if (role === 'Director')       navigate('/director-dashboard');
     else if (role === 'Secretary') navigate('/dashboard');
-    else if (role === 'Faculty')   navigate('/faculty-dashboard');
+    else if (role === 'Faculty')   navigate('/faculty-requests');
     else if (role === 'Visitor')   navigate('/visitor-dashboard');
     else navigate('/');
   };

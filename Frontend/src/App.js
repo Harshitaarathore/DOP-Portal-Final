@@ -7,8 +7,6 @@ import OTPVerification from './pages/OTPVerification';
 import ResetPassword from './pages/ResetPassword';
 import SuccessPage from './pages/SuccessPage';
 
-import SuperAdmin from './pages/SuperAdmin';
-
 import SecretaryDashboard from './pages/SecretaryDashboard';
 import Calendar from './pages/Calendar';
 import Requests from './pages/Requests';
@@ -20,8 +18,6 @@ import Settings from './pages/Settings';
 
 
 import DirectorDashboard from './pages/DirectorDashboard';
-import DirectorRequests from './pages/DirectorRequests';
-import FacultyDashboard from './pages/FacultyDashboard';
 import FacultyRequests from './pages/FacultyRequests';
 import FacultyCalendar from './pages/FacultyCalendar';
 import StaffPortal from './pages/StaffPortal';
@@ -38,8 +34,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['SuperAdmin']}><SuperAdmin /></ProtectedRoute>} />
 
         {/* Public */}
         <Route path="/"                 element={<Login />} />
@@ -70,7 +64,6 @@ function App() {
         <Route path="/staff-portal" element={<ProtectedRoute allowedRoles={['Staff']}><StaffPortal /></ProtectedRoute>} />
 
         {/* Faculty */}
-        <Route path="/faculty-dashboard" element={<ProtectedRoute allowedRoles={['Faculty']}><FacultyDashboard /></ProtectedRoute>} />
         <Route path="/faculty-requests"  element={<ProtectedRoute allowedRoles={['Faculty']}><FacultyRequests /></ProtectedRoute>} />
         <Route path="/faculty-calendar"  element={<ProtectedRoute allowedRoles={['Faculty']}><FacultyCalendar /></ProtectedRoute>} />
 
