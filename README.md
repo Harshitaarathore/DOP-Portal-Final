@@ -40,7 +40,7 @@ The system supports **four distinct user roles**, each with a customized dashboa
 | Harshita Rathore | 2024Btech178 | B.Tech CSE | Frontend Development (React.js) |
 | Garv Sharma | 2024Btech029 | B.Tech CS/AI | Backend Development (Node.js, MySQL) |
 
-**External Supervisor:** Dr. Saurabh Kumar, LNMIIT, Jaipur
+**Supervisor:** Dr. Saurabh Kumar, LNMIIT, Jaipur
 
 ---
 
