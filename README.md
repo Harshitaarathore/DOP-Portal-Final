@@ -78,6 +78,7 @@ DOP-Portal-Final/
 │   │   │   ├── VisitorRegister.js
 │   │   │   ├── SecretaryDashboard.js
 │   │   │   ├── DirectorDashboard.js
+│   │   │   ├── FacultyDashboard.js
 │   │   │   ├── Calendar.js
 │   │   │   ├── Requests.js
 │   │   │   ├── Visitors.js
@@ -90,6 +91,8 @@ DOP-Portal-Final/
 │   │   │   ├── AuditLogs.js
 │   │   │   ├── Communications.js
 │   │   │   ├── StaffPortal.js
+│   │   │   ├── FacultyRequests.js
+│   │   │   ├── FacultyCalendar.js
 │   │   │   └── NotFound.js
 │   │   ├── assets/                  # LNMIIT logo, campus images
 │   │   ├── hooks/
